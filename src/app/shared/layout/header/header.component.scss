@@ -1,0 +1,106 @@
+.header-toolbar {
+    height: 64px;
+    padding: 0 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .left-section {
+    display: flex;
+    align-items: center;
+  }
+  
+  .logo-container {
+    display: flex;
+    align-items: center;
+    margin-left: 8px;
+  }
+  
+  .logo-image {
+    height: 40px;
+    margin-right: 10px;
+  }
+  
+  .app-title {
+    font-size: 1.2rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  
+  .spacer {
+    flex: 1 1 auto;
+  }
+  
+  .right-section {
+    display: flex;
+    align-items: center;
+  }
+  
+  .notification-button {
+    margin-right: 10px;
+  }
+  
+  .user-button {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    min-width: 120px;
+    
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+  
+  .user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-right: 8px;
+    overflow: hidden;
+  }
+  
+  .user-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+  }
+  
+  .user-role {
+    font-size: 0.75rem;
+    opacity: 0.8;
+  }
+  
+  .dropdown-icon {
+    margin-left: auto;
+  }
+  
+  // Responsive Anpassungen
+  @media (max-width: 600px) {
+    .app-title {
+      display: none;
+    }
+    
+    .user-name {
+      max-width: 100px;
+    }
+  }
+  
+  @media (max-width: 400px) {
+    .user-role {
+      display: none;
+    }
+    
+    .user-button {
+      min-width: auto;
+      padding: 4px;
+    }
+  }

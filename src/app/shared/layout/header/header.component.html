@@ -1,0 +1,59 @@
+<mat-toolbar color="primary" class="header-toolbar">
+    <div class="left-section">
+      <!-- Toggle-Button für die Seitennavigation -->
+      <button 
+        mat-icon-button 
+        (click)="onToggleSideNav()" 
+        matTooltip="{{ sideNavOpened ? 'Navigation einklappen' : 'Navigation ausklappen' }}"
+        class="sidenav-toggle">
+        <mat-icon>{{ sideNavOpened ? 'menu_open' : 'menu' }}</mat-icon>
+      </button>
+      
+      <!-- Logo und Titel -->
+      <div class="logo-container">
+        <img src="assets/logo.svg" alt="ZSO Gantrisch Logo" class="logo-image">
+        <span class="app-title">ZSO Gantrisch</span>
+      </div>
+    </div>
+    
+    <div class="spacer"></div>
+    
+    <div class="right-section">
+      <!-- Benachrichtigungsbutton (Platzhalter) -->
+      <button 
+        mat-icon-button 
+        matTooltip="Benachrichtigungen"
+        class="notification-button">
+        <mat-icon matBadge="1" matBadgeColor="warn">notifications</mat-icon>
+      </button>
+      
+      <!-- Benutzermenü -->
+      <button 
+        mat-button 
+        [matMenuTriggerFor]="userMenu" 
+        class="user-button">
+        <div class="user-info">
+          <span class="user-name">{{ currentUser()?.displayName }}</span>
+          <span class="user-role">{{ getRoleName() }}</span>
+        </div>
+        <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
+      </button>
+      
+      <!-- Benutzermenü-Dropdown -->
+      <mat-menu #userMenu="matMenu">
+        <button mat-menu-item (click)="navigateToProfile()">
+          <mat-icon>person</mat-icon>
+          <span>Profil</span>
+        </button>
+        <button mat-menu-item (click)="navigateToDashboard()">
+          <mat-icon>dashboard</mat-icon>
+          <span>Dashboard</span>
+        </button>
+        <mat-divider></mat-divider>
+        <button mat-menu-item (click)="logout()">
+          <mat-icon>exit_to_app</mat-icon>
+          <span>Abmelden</span>
+        </button>
+      </mat-menu>
+    </div>
+  </mat-toolbar>

@@ -1,0 +1,32 @@
+.main-layout-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  
+  .sidenav-container {
+    flex: 1;
+    width: 100%;
+  }
+  
+  .sidenav {
+    width: 250px;
+    border-right: 1px solid #e0e0e0;
+  }
+  
+  .content-container {
+    background-color: #fafafa;
+  }
+  
+  .content-wrapper {
+    padding: 20px;
+    box-sizing: border-box;
+    max-width: 1400px;
+    margin: 0 auto;
+    min-height: calc(100vh - 64px);
+  }
+  
+  .auth-container {
+    height: 100vh;
+    width: 100vw;
+  }
