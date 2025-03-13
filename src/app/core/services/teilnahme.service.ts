@@ -11,22 +11,42 @@ export class TeilnahmeService {
   private firebaseService = inject(FirebaseService);
   private collectionName = 'teilnahmen';
   
-  // Signal für alle Teilnahmen
-  private _teilnahmen = signal<Ausbildungsteilnahme[]>([]);
+
+  /**
+   * Private signal containing an array of training participations (Ausbildungsteilnahme).
+   * Tracks participations in educational/training activities.
+   * @private
+   * @type {WritableSignal<Ausbildungsteilnahme[]>}
+   */
+  private _teilnahmen = signal<Ausbildungsteilnahme[]>([]);  
   
-  // Öffentliches computed Signal zur Verwendung in Komponenten
+  /**
+   * Computed signal that returns all teilnahmen (participations) from the store.
+   * This property provides read-only access to the participations data.
+   * @returns A Signal containing an array of Teilnahme objects
+   */
   public teilnahmen = computed(() => this._teilnahmen());
-  
-  // Umwandlung des Signals in ein Observable für Komponenten, die Observables benötigen
+
+  /**
+   * Observable stream of all Teilnahmen (participations).
+   * Emits whenever the underlying signal {@link teilnahmen} changes.
+   * @readonly
+   * @type {Observable<Teilnahme[]>}
+   */
   public teilnahmen$ = toObservable(this.teilnahmen);
   
+
   constructor() {
-    // Initialisierung: Laden aller Teilnahmen
     this.loadTeilnahmen();
   }
   
+
   /**
-   * Lädt alle Teilnahmen aus Firestore
+   * Loads all Ausbildungsteilnahme (training participation) records from Firebase.
+   * Updates the internal BehaviorSubject with the loaded data.
+   * 
+   * @throws Will throw and log an error if the Firebase query fails
+   * @returns Promise that resolves when data is loaded and state is updated
    */
   async loadTeilnahmen(): Promise<void> {
     try {
@@ -38,10 +58,13 @@ export class TeilnahmeService {
     }
   }
   
+
   /**
-   * Lädt Teilnahmen für eine bestimmte Person
-   * @param personId ID der Person
-   * @returns Teilnahmen der Person
+   * Retrieves all training participations for a specific person from Firebase.
+   * 
+   * @param personId - The unique identifier of the person
+   * @returns A Promise resolving to an array of Ausbildungsteilnahme (training participation) objects
+   * @throws Will handle and log any Firebase query errors, returning an empty array in case of failure
    */
   async getTeilnahmenByPerson(personId: string): Promise<Ausbildungsteilnahme[]> {
     try {
@@ -57,10 +80,12 @@ export class TeilnahmeService {
     }
   }
   
+
   /**
-   * Lädt Teilnahmen für eine bestimmte Ausbildung
-   * @param ausbildungId ID der Ausbildung
-   * @returns Teilnahmen für die Ausbildung
+   * Retrieves all participation entries for a specific training/education.
+   * @param ausbildungId - The unique identifier of the training/education
+   * @returns Promise containing an array of training participations. Returns empty array if operation fails.
+   * @throws {Error} Error while querying the database (caught internally)
    */
   async getTeilnahmenByAusbildung(ausbildungId: string): Promise<Ausbildungsteilnahme[]> {
     try {
@@ -76,10 +101,14 @@ export class TeilnahmeService {
     }
   }
   
+
   /**
-   * Erstellt eine neue Teilnahme
-   * @param teilnahme Teilnahmedaten
-   * @returns ID der erstellten Teilnahme
+   * Creates a new participation record (Ausbildungsteilnahme) in the database.
+   * Also updates the local state by adding the new participation to the existing collection.
+   * 
+   * @param teilnahme - The participation data without an ID to be created
+   * @returns A Promise that resolves to the ID of the newly created participation record
+   * @throws Will throw and log an error if the creation fails
    */
   async createTeilnahme(teilnahme: Omit<Ausbildungsteilnahme, 'id'>): Promise<string> {
     try {
@@ -96,10 +125,14 @@ export class TeilnahmeService {
     }
   }
   
+
   /**
-   * Aktualisiert eine bestehende Teilnahme
-   * @param id Teilnahme-ID
-   * @param teilnahme Aktualisierte Teilnahmedaten
+   * Updates a participation record both in Firebase and in the local state.
+   * 
+   * @param id - The unique identifier of the participation record to update
+   * @param teilnahme - Partial object containing the fields to be updated
+   * @throws Will throw an error if the Firebase update operation fails
+   * @returns Promise that resolves when both remote and local updates are complete
    */
   async updateTeilnahme(id: string, teilnahme: Partial<Ausbildungsteilnahme>): Promise<void> {
     try {
@@ -115,9 +148,17 @@ export class TeilnahmeService {
     }
   }
   
+
   /**
-   * Löscht eine Teilnahme
-   * @param id Teilnahme-ID
+   * Deletes a Teilnahme (participation) by its ID.
+   *
+   * This method attempts to delete a Teilnahme from the Firebase service using the provided ID.
+   * If the deletion is successful, it updates the local state by removing the deleted Teilnahme.
+   * If an error occurs during the deletion process, it logs the error and rethrows it.
+   *
+   * @param {string} id - The ID of the Teilnahme to be deleted.
+   * @returns {Promise<void>} A promise that resolves when the Teilnahme is successfully deleted.
+   * @throws Will throw an error if the deletion process fails.
    */
   async deleteTeilnahme(id: string): Promise<void> {
     try {
