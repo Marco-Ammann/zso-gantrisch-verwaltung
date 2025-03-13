@@ -72,7 +72,76 @@
     </div>
   </div>
 
-  <mat-card>
+  <!-- View toggle buttons -->
+  <div class="view-controls-container">
+    <div class="view-controls">
+      <button mat-button (click)="setViewMode('table')" [class.active]="$any(viewMode) === 'table'">
+        <mat-icon>view_list</mat-icon> Tabelle
+      </button>
+      <button mat-button (click)="setViewMode('cards')" [class.active]="$any(viewMode) === 'cards'">
+        <mat-icon>view_module</mat-icon> Karten
+      </button>
+    </div>
+  </div>
+  
+  <!-- Card View -->
+  <div *ngIf="viewMode === 'cards'" class="person-cards-container">
+    <mat-card *ngFor="let person of dataSource.data" class="person-card" (click)="viewPerson(person)">
+      <mat-card-header>
+        <div mat-card-avatar class="person-avatar">
+          {{ person.grunddaten.nachname.charAt(0) }}{{ person.grunddaten.vorname.charAt(0) }}
+        </div>
+        <mat-card-title>{{ person.grunddaten.grad }} {{ person.grunddaten.nachname }}</mat-card-title>
+        <mat-card-subtitle>{{ person.grunddaten.vorname }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="person-card-content">
+          <div class="person-card-detail">
+            <mat-icon>work</mat-icon>
+            <span>{{ person.grunddaten.funktion || 'Keine Funktion angegeben' }}</span>
+          </div>
+          
+          <div class="person-card-detail">
+            <mat-icon>phone</mat-icon>
+            <span>{{ person.kontaktdaten.telefonMobil || 'Keine Nummer angegeben' }}</span>
+          </div>
+          
+          <div class="person-card-detail">
+            <mat-icon>email</mat-icon>
+            <span>{{ person.kontaktdaten.email || 'Keine E-Mail angegeben' }}</span>
+          </div>
+          
+          <div class="person-card-detail">
+            <mat-icon>group</mat-icon>
+            <span>Zug {{ person.zivilschutz.einteilung.zug }}
+              <span *ngIf="person.zivilschutz.einteilung.gruppe">, Gruppe {{ person.zivilschutz.einteilung.gruppe }}</span>
+            </span>
+          </div>
+        </div>
+        
+        <span class="status-badge" [ngClass]="getStatusColorClass(person.zivilschutz.status)">
+          {{ formatStatus(person.zivilschutz.status) }}
+        </span>
+      </mat-card-content>
+      <mat-card-actions *ngIf="canEdit() || canDelete()">
+        <button mat-icon-button color="primary" matTooltip="Details anzeigen" 
+                (click)="viewPerson(person); $event.stopPropagation()">
+          <mat-icon>visibility</mat-icon>
+        </button>
+        <button mat-icon-button color="accent" matTooltip="Bearbeiten" 
+                (click)="editPerson(person); $event.stopPropagation()" *ngIf="canEdit()">
+          <mat-icon>edit</mat-icon>
+        </button>
+        <button mat-icon-button color="warn" matTooltip="Löschen" 
+                (click)="deletePerson(person, $event)" *ngIf="canDelete()">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+
+  <!-- Table View -->
+  <mat-card *ngIf="viewMode === 'table'">
     <div class="table-container">
       <table mat-table [dataSource]="dataSource" matSort class="personen-table">
         <!-- Grad -->

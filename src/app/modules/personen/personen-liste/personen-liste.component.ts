@@ -1,5 +1,5 @@
 // src/app/modules/personen/personen-liste/personen-liste.component.ts
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
@@ -18,6 +18,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { BreakpointObserver, Breakpoints, LayoutModule } from '@angular/cdk/layout';
+import { Subject, takeUntil } from 'rxjs';
 
 import { PersonService } from '../../../core/services/person.service';
 import { AuthService } from '../../../auth/services/auth.service';
@@ -45,16 +47,19 @@ import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog/confir
     MatMenuModule,
     MatDialogModule,
     MatSnackBarModule,
+    LayoutModule,
   ],
   templateUrl: './personen-liste.component.html',
   styleUrls: ['./personen-liste.component.scss'],
 })
-export class PersonenListeComponent implements OnInit {
+export class PersonenListeComponent implements OnInit, OnDestroy {
   private personService = inject(PersonService);
   private authService = inject(AuthService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private breakpointObserver = inject(BreakpointObserver);
+  private destroy$ = new Subject<void>();
 
   // Rechte basierend auf der Benutzerrolle
   canEdit = this.authService.canEdit;
@@ -97,6 +102,9 @@ export class PersonenListeComponent implements OnInit {
     };
   });
 
+  // View mode control
+  viewMode: 'table' | 'cards' = 'table';
+
   ngOnInit(): void {
     // Personen laden
     this.loadPersonen();
@@ -106,6 +114,50 @@ export class PersonenListeComponent implements OnInit {
       this.personService.setFilter(value || '');
       this.applyFilter();
     });
+
+    // Set view mode based on screen size
+    this.setResponsiveViewMode();
+
+    // Listen for screen size changes
+    this.breakpointObserver
+      .observe([
+        Breakpoints.HandsetPortrait,
+        Breakpoints.TabletPortrait,
+        Breakpoints.Handset,
+        Breakpoints.Tablet
+      ])
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.setResponsiveViewMode();
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /**
+   * Sets the appropriate view mode based on screen size
+   * Cards for mobile/tablet devices, table for larger screens
+   */
+  setResponsiveViewMode(): void {
+    const isSmallScreen = this.breakpointObserver.isMatched([
+      Breakpoints.HandsetPortrait,
+      Breakpoints.TabletPortrait,
+      Breakpoints.Handset,
+      Breakpoints.Tablet
+    ]);
+
+    this.viewMode = isSmallScreen ? 'cards' : 'table';
+  }
+  
+  /**
+   * Manually switches between table and card views
+   * @param mode The view mode to set ('table' or 'cards')
+   */
+  setViewMode(mode: 'table' | 'cards'): void {
+    this.viewMode = mode;
   }
 
   /**

@@ -41,7 +41,79 @@
     <p>Daten werden geladen...</p>
   </div>
 
-  <mat-card *ngIf="!isLoading()">
+  <!-- View toggle buttons -->
+  <div *ngIf="!isLoading()" class="view-controls-container">
+    <div class="view-controls">
+      <button mat-button (click)="setViewMode('table')" [class.active]="$any(viewMode) === 'table'">
+        <mat-icon>view_list</mat-icon> Tabelle
+      </button>
+      <button mat-button (click)="setViewMode('cards')" [class.active]="$any(viewMode) === 'cards'">
+        <mat-icon>view_module</mat-icon> Karten
+      </button>
+    </div>
+  </div>
+  
+  <!-- Card View -->
+  <div *ngIf="!isLoading() && viewMode === 'cards'" class="ausbildung-cards-container">
+    <mat-card *ngFor="let ausbildung of dataSource.data" class="ausbildung-card" (click)="viewAusbildung(ausbildung)">
+      <div class="ausbildung-card-header" [ngClass]="'typ-' + ausbildung.typ">
+        <span class="typ-badge">{{ ausbildung.typ }}</span>
+        <span class="ausbildung-jahr">{{ ausbildung.jahr }}</span>
+      </div>
+      <mat-card-content>
+        <h3 class="ausbildung-title">{{ ausbildung.titel }}</h3>
+        <p *ngIf="ausbildung.beschreibung" class="ausbildung-description">{{ ausbildung.beschreibung }}</p>
+        
+        <div class="ausbildung-details">
+          <div class="detail-item">
+            <mat-icon>event</mat-icon>
+            <span>{{ formatDate(ausbildung.datum) }}</span>
+          </div>
+          
+          <div class="detail-item">
+            <mat-icon>people</mat-icon>
+            <span>{{ getParticipantCount(ausbildung.id) }} Teilnehmer</span>
+          </div>
+          
+          <div class="detail-item" *ngIf="getParticipantCount(ausbildung.id) > 0">
+            <mat-icon>check_circle</mat-icon>
+            <span>{{ getCompletedParticipantCount(ausbildung.id) }} Abgeschlossen</span>
+          </div>
+          
+          <div class="detail-item">
+            <mat-icon>{{ ausbildung.erforderlich ? 'verified' : 'outlined_flag' }}</mat-icon>
+            <span>{{ ausbildung.erforderlich ? 'Erforderlich' : 'Optional' }}</span>
+          </div>
+        </div>
+        
+        <mat-progress-bar 
+          *ngIf="getParticipantCount(ausbildung.id) > 0"
+          [value]="(getCompletedParticipantCount(ausbildung.id) / getParticipantCount(ausbildung.id)) * 100"
+          class="participation-progress">
+        </mat-progress-bar>
+      </mat-card-content>
+      
+      <mat-card-actions>
+        <button mat-button color="primary" (click)="viewAusbildung(ausbildung); $event.stopPropagation()">
+          <mat-icon>visibility</mat-icon> Details
+        </button>
+        <button mat-button color="primary" (click)="erfasseTeilnahme(ausbildung, $event)">
+          <mat-icon>assignment_turned_in</mat-icon> Teilnahme
+        </button>
+        <button mat-icon-button color="accent" *ngIf="canEdit()" 
+                (click)="editAusbildung(ausbildung, $event)">
+          <mat-icon>edit</mat-icon>
+        </button>
+        <button mat-icon-button color="warn" *ngIf="canDelete()"
+                (click)="deleteAusbildung(ausbildung, $event)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+
+  <!-- Table View -->
+  <mat-card *ngIf="!isLoading() && viewMode === 'table'">
     <div class="table-container">
       <table mat-table [dataSource]="dataSource" matSort class="ausbildungen-table">
         <!-- Typ -->

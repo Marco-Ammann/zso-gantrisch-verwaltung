@@ -1,5 +1,5 @@
 // src/app/modules/ausbildungen/ausbildungen-liste/ausbildungen-liste.component.ts
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
@@ -17,12 +17,17 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { ViewChild } from '@angular/core';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { BreakpointObserver, Breakpoints, LayoutModule } from '@angular/cdk/layout';
+import { Subject, takeUntil } from 'rxjs';
 
 import { AusbildungService } from '../../../core/services/ausbildung.service';
 import { AuthService } from '../../../auth/services/auth.service';
 import { Ausbildung } from '../../../core/models/ausbildung.model';
 import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog/confirm-dialog.component';
+import { TeilnahmeService } from '../../../core/services/teilnahme.service';
+import { PersonService } from '../../../core/services/person.service';
+import { Ausbildungsteilnahme } from '../../../core/models/teilnahme.model';
 
 @Component({
   selector: 'app-ausbildungen-liste',
@@ -44,16 +49,22 @@ import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog/confir
     MatSnackBarModule,
     MatProgressSpinnerModule,
     MatSelectModule,
+    MatProgressBarModule, // Add this import for mat-progress-bar
+    LayoutModule,
   ],
   templateUrl: './ausbildungen-liste.component.html',
   styleUrls: ['./ausbildungen-liste.component.scss'],
 })
-export class AusbildungenListeComponent implements OnInit {
+export class AusbildungenListeComponent implements OnInit, OnDestroy {
   private ausbildungService = inject(AusbildungService);
   private authService = inject(AuthService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private teilnahmeService = inject(TeilnahmeService);
+  private personService = inject(PersonService);
+  private breakpointObserver = inject(BreakpointObserver);
+  private destroy$ = new Subject<void>();
 
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -89,6 +100,12 @@ export class AusbildungenListeComponent implements OnInit {
   // Ladeindikator
   isLoading = signal(true);
 
+  // View mode control
+  viewMode: 'table' | 'cards' = 'table';
+  
+  // Participants data cache
+  ausbildungParticipants = new Map<string, Ausbildungsteilnahme[]>();
+
   ngOnInit(): void {
     // Ausbildungen laden
     this.loadAusbildungen();
@@ -103,6 +120,22 @@ export class AusbildungenListeComponent implements OnInit {
     this.typFilter.valueChanges.subscribe(() => {
       this.updateDataSource();
     });
+    
+    // Set view mode based on screen size
+    this.setResponsiveViewMode();
+    
+    // Listen for screen size changes
+    this.breakpointObserver
+      .observe([
+        Breakpoints.HandsetPortrait,
+        Breakpoints.TabletPortrait,
+        Breakpoints.Handset,
+        Breakpoints.Tablet
+      ])
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.setResponsiveViewMode();
+      });
   }
 
   ngAfterViewInit() {
@@ -112,6 +145,35 @@ export class AusbildungenListeComponent implements OnInit {
     }
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /**
+   * Sets the appropriate view mode based on screen size
+   * Cards for mobile/tablet devices, table for larger screens
+   */
+  setResponsiveViewMode(): void {
+    const isSmallScreen = this.breakpointObserver.isMatched([
+      Breakpoints.HandsetPortrait,
+      Breakpoints.TabletPortrait,
+      Breakpoints.Handset,
+      Breakpoints.Tablet
+    ]);
+    
+    const newViewMode = isSmallScreen ? 'cards' : 'table';
+    
+    // Only change view mode if needed to prevent redundant data loading
+    if (this.viewMode !== newViewMode) {
+      this.viewMode = newViewMode;
+      
+      // Load participants if switching to card view
+      if (newViewMode === 'cards') {
+        this.loadParticipants();
+      }
+    }
+  }
 
   /**
    * Lädt Ausbildungen vom Service und wendet Filter an
@@ -128,7 +190,6 @@ export class AusbildungenListeComponent implements OnInit {
       this.isLoading.set(false);
     }
   }
-
 
   /**
    * Aktualisiert die Datenquelle basierend auf den Filtern
@@ -152,7 +213,6 @@ export class AusbildungenListeComponent implements OnInit {
     console.log('Datenquelle aktualisiert:', this.dataSource.data);
   }
 
-
   /**
    * Zur Detailseite einer Ausbildung navigieren
    */
@@ -165,7 +225,6 @@ export class AusbildungenListeComponent implements OnInit {
     }
   }
 
-
   /**
    * Zum Bearbeitungsformular einer Ausbildung navigieren
    */
@@ -177,7 +236,6 @@ export class AusbildungenListeComponent implements OnInit {
       this.showSnackBar('Fehler: Ausbildung hat keine ID');
     }
   }
-
 
   /**
    * Deletes an Ausbildung after confirmation.
@@ -202,7 +260,6 @@ export class AusbildungenListeComponent implements OnInit {
     });
   }
 
-
   /**
    * Validates if an Ausbildung can be deleted
    */
@@ -213,7 +270,6 @@ export class AusbildungenListeComponent implements OnInit {
     }
     return true;
   }
-
 
   /**
    * Opens the confirmation dialog
@@ -230,7 +286,6 @@ export class AusbildungenListeComponent implements OnInit {
     });
   }
 
-
   /**
    * Executes the deletion process
    */
@@ -245,7 +300,6 @@ export class AusbildungenListeComponent implements OnInit {
     }
   }
 
-
   /**
    * Navigates to the ausbildungen creation page.
    *
@@ -255,7 +309,6 @@ export class AusbildungenListeComponent implements OnInit {
   createAusbildung(): void {
     this.router.navigate(['/ausbildungen/neu']);
   }
-
 
   /**
    * Navigates to the teilnahmen page for a specific ausbildung.
@@ -273,7 +326,6 @@ export class AusbildungenListeComponent implements OnInit {
       this.showSnackBar('Fehler: Ausbildung hat keine ID');
     }
   }
-  
 
   /**
    * Snackbar-Benachrichtigung anzeigen
@@ -284,5 +336,80 @@ export class AusbildungenListeComponent implements OnInit {
       horizontalPosition: 'center',
       verticalPosition: 'bottom',
     });
+  }
+
+  /**
+   * Switches between table and card views
+   * @param mode The view mode to set ('table' or 'cards')
+   */
+  setViewMode(mode: 'table' | 'cards'): void {
+    this.viewMode = mode;
+    
+    // Load participants when switching to card view
+    if (mode === 'cards') {
+      this.loadParticipants();
+    }
+  }
+  
+  /**
+   * Loads participants for all visible ausbildungen
+   */
+  async loadParticipants(): Promise<void> {
+    try {
+      // Load data for each ausbildung
+      for (const ausbildung of this.dataSource.data) {
+        if (ausbildung.id) {
+          // Fixed method name from getTeilnahmenByAusbildungId to getTeilnahmenByAusbildung
+          const teilnahmen = await this.teilnahmeService.getTeilnahmenByAusbildung(ausbildung.id);
+          this.ausbildungParticipants.set(ausbildung.id, teilnahmen);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading participants:', error);
+      this.showSnackBar('Fehler beim Laden der Teilnehmer');
+    }
+  }
+  
+  /**
+   * Gets participants count for an ausbildung
+   */
+  getParticipantCount(ausbildungId: string): number {
+    return this.ausbildungParticipants.get(ausbildungId)?.length || 0;
+  }
+  
+  /**
+   * Gets completed participants count
+   */
+  getCompletedParticipantCount(ausbildungId: string): number {
+    return this.ausbildungParticipants.get(ausbildungId)?.filter(t => 
+      t.status === 'teilgenommen').length || 0;
+  }
+
+  /**
+   * Formats a Firestore Timestamp or Date to display format
+   * Handles both native Date objects and Firestore Timestamp objects
+   * @param dateValue - The date value to format (Timestamp or Date)
+   * @returns Formatted date string or placeholder if no date provided
+   */
+  formatDate(dateValue: any): string {
+    if (!dateValue) return 'Kein Datum';
+    
+    // Handle Firestore Timestamp objects which have a toDate method
+    if (dateValue && typeof dateValue.toDate === 'function') {
+      return new Date(dateValue.toDate()).toLocaleDateString('de-CH');
+    }
+    
+    // Handle JavaScript Date objects
+    if (dateValue instanceof Date) {
+      return dateValue.toLocaleDateString('de-CH');
+    }
+    
+    // For string dates or other formats, try to create a Date object
+    try {
+      return new Date(dateValue).toLocaleDateString('de-CH');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Ungültiges Datum';
+    }
   }
 }

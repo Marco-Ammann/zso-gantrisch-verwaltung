@@ -138,9 +138,16 @@
   gap: 12px;
 }
 
+.view-controls-container {
+  margin-bottom: 16px;
+  background-color: white;
+  border-radius: 4px;
+  padding: 8px 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
 .view-controls {
   display: flex;
-  margin-bottom: 16px;
   
   button {
     margin-right: 8px;

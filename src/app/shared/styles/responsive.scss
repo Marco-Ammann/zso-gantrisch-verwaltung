@@ -1,0 +1,73 @@
+/**
+ * Shared responsive style utilities
+ * Updated to use modern Sass syntax for better compatibility
+ */
+
+// Responsive card grid system
+.responsive-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+// Make tables responsive on small screens
+.responsive-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
+// Utility classes for responsive spacing
+.responsive-padding {
+  padding: 16px;
+  
+  @media (max-width: 599px) {
+    padding: 12px 8px;
+  }
+}
+
+// Responsive form fields
+.responsive-form-field {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+// Responsive action buttons
+.responsive-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  
+  @media (max-width: 599px) {
+    flex-direction: column;
+    
+    button {
+      width: 100%;
+    }
+  }
+}
+
+// Responsive typography
+.responsive-title {
+  font-size: 24px;
+  
+  @media (max-width: 599px) {
+    font-size: 20px;
+  }
+}
+
+// Card style with responsive padding
+.responsive-card {
+  padding: 16px;
+  
+  @media (max-width: 599px) {
+    padding: 12px;
+  }
+}
+
+// Image responsiveness
+.responsive-image {
+  max-width: 100%;
+  height: auto;
+}

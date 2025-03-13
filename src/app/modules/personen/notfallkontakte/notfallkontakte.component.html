@@ -51,6 +51,18 @@
     </mat-card-content>
   </mat-card>
   
+  <!-- View-Controls - moved outside of conditional views so they're always visible -->
+  <div *ngIf="!isLoading" class="view-controls-container">
+    <div class="view-controls">
+      <button mat-button (click)="setViewMode('table')" [class.active]="$any(viewMode) === 'table'">
+        <mat-icon>view_list</mat-icon> Tabelle
+      </button>
+      <button mat-button (click)="setViewMode('cards')" [class.active]="$any(viewMode) === 'cards'">
+        <mat-icon>view_module</mat-icon> Karten
+      </button>
+    </div>
+  </div>
+  
   <!-- Alternativansicht: Gruppierte Karten statt Tabelle -->
   <div *ngIf="viewMode === 'cards'" class="card-container">
     <div *ngFor="let person of groupedContacts | keyvalue" class="person-group">
@@ -116,17 +128,6 @@
   
   <!-- Standard-Tabellenansicht -->
   <mat-card *ngIf="!isLoading && viewMode === 'table'">
-    <mat-card-header>
-      <div class="view-controls">
-        <button mat-button (click)="setViewMode('table')" [class.active]="$any(viewMode) === 'table'">
-          <mat-icon>view_list</mat-icon> Tabelle
-        </button>
-        <button mat-button (click)="setViewMode('cards')" [class.active]="$any(viewMode) === 'cards'">
-          <mat-icon>view_module</mat-icon> Karten
-        </button>
-      </div>
-    </mat-card-header>
-    
     <div class="table-container">
       <table mat-table [dataSource]="dataSource" matSort class="notfallkontakte-table">
         <!-- Person -->

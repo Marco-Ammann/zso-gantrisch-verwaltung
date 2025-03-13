@@ -1,7 +1,7 @@
-
 // Custom Theming for Angular Material
 // For more information: https://material.angular.io/guide/theming
 @use '@angular/material' as mat;
+@use './app/shared/styles/responsive.scss' as responsive;
 
 html {
   @include mat.theme((
@@ -12,8 +12,42 @@ html {
     ),
     typography: Roboto,
     density: 0,
-  ));
-}/* You can add global styles to this file, and also import other style files */
+   ));
+}
+
+/* Additional global responsive styles */
+@media (max-width: 599px) {
+  .mat-mdc-card {
+    padding: 12px 8px !important;
+  }
+  
+  .mat-mdc-dialog-container .mat-mdc-dialog-surface {
+    padding: 12px !important;
+  }
+  
+  .mat-typography h1 {
+    font-size: 20px;
+  }
+}
+
+/* Adjust Material Design components for better mobile experience */
+.mat-mdc-form-field {
+  width: 100%;
+}
+
+.mat-mdc-tab-group {
+  @media (max-width: 599px) {
+    .mat-mdc-tab-labels {
+      flex-wrap: wrap;
+      
+      .mat-mdc-tab {
+        min-width: 120px;
+      }
+    }
+  }
+}
+
+/* You can add global styles to this file, and also import other style files */
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
