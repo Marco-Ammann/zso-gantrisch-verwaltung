@@ -34,18 +34,18 @@ export const AUSBILDUNGEN_ROUTES: Routes = [
     data: { roles: ['admin', 'oberleutnant', 'leutnant'] }
   },
   {
-    path: 'matrix',
-    loadComponent: () => import('./ausbildungsmatrix/ausbildungsmatrix.component')
-      .then(m => m.AusbildungsmatrixComponent),
-    title: 'Ausbildungsmatrix - ZSO Gantrisch',
-    canActivate: [authGuard]
-  },
-  {
     path: 'teilnahmen/:ausbildungId',
     loadComponent: () => import('./teilnahme-erfassung/teilnahme-erfassung.component')
       .then(m => m.TeilnahmeErfassungComponent),
     title: 'Teilnahmen erfassen - ZSO Gantrisch',
     canActivate: [authGuard],
     data: { roles: ['admin', 'oberleutnant', 'leutnant'] }
+  },
+  {
+    path: 'matrix',
+    loadComponent: () => import('./ausbildungsmatrix/ausbildungsmatrix.component')
+      .then(m => m.AusbildungsmatrixComponent),
+    title: 'Ausbildungsmatrix - ZSO Gantrisch',
+    canActivate: [authGuard]
   }
 ];

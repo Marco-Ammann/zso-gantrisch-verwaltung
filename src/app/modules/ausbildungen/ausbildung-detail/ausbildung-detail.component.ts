@@ -54,28 +54,33 @@ export class AusbildungDetailComponent implements OnInit {
   canEdit = this.authService.canEdit;
   canDelete = this.authService.canDelete;
 
-  // Zustände
-  ausbildung = signal<Ausbildung | null>(null);
-  teilnahmen = signal<Ausbildungsteilnahme[]>([]);
-  personen = signal<Person[]>([]);
-  isLoading = signal(true);
-  loadingTeilnahmen = signal(false);
-
-  // ID der Ausbildung
-  ausbildungId: string | null = null;
+   // Zustände
+   ausbildung = signal<Ausbildung | null>(null);
+   teilnahmen = signal<Ausbildungsteilnahme[]>([]);
+   personen = signal<Person[]>([]);
+   isLoading = signal(true);
+   loadingTeilnahmen = signal(false);
+ 
+   // ID der Ausbildung
+   ausbildungId: string | null = null;
 
   // Tabellenkonfiguration für Teilnahmen
   displayedColumns: string[] = ['person', 'datum', 'status', 'bemerkung', 'aktionen'];
   dataSource: any[] = [];
 
   ngOnInit(): void {
+    console.log('AusbildungDetailComponent initialisiert');
     this.route.paramMap.subscribe(params => {
+      console.log('Route-Parameter:', params);
       const id = params.get('id');
+      console.log('Ausbildungs-ID aus Route:', id);
+      
       if (id) {
         this.ausbildungId = id;
         this.loadAusbildung(id);
         this.loadTeilnahmen(id);
       } else {
+        console.error('Keine Ausbildungs-ID in den Routenparametern gefunden');
         this.showSnackBar('Keine Ausbildungs-ID gefunden');
         this.router.navigate(['/ausbildungen']);
       }
@@ -88,7 +93,10 @@ export class AusbildungDetailComponent implements OnInit {
   async loadAusbildung(id: string): Promise<void> {
     this.isLoading.set(true);
     try {
+      console.log('Lade Ausbildung mit ID:', id);
       const ausbildung = await this.ausbildungService.getAusbildungById(id);
+      console.log('Geladene Ausbildung:', ausbildung);
+      
       this.ausbildung.set(ausbildung);
       
       if (!ausbildung) {

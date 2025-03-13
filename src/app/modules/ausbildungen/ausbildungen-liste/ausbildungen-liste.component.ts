@@ -4,8 +4,8 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatSortModule } from '@angular/material/sort';
-import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,6 +17,7 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { ViewChild } from '@angular/core';
 
 import { AusbildungService } from '../../../core/services/ausbildung.service';
 import { AuthService } from '../../../auth/services/auth.service';
@@ -53,6 +54,9 @@ export class AusbildungenListeComponent implements OnInit {
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+
+  @ViewChild(MatSort) sort!: MatSort;
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   // Rechte basierend auf der Benutzerrolle
   canEdit = this.authService.canEdit;
@@ -101,6 +105,13 @@ export class AusbildungenListeComponent implements OnInit {
     });
   }
 
+  ngAfterViewInit() {
+    if (this.sort && this.paginator) {
+      this.dataSource.sort = this.sort;
+      this.dataSource.paginator = this.paginator;
+    }
+  }
+
   /**
    * Lädt Ausbildungen vom Service und wendet Filter an
    */
@@ -134,13 +145,21 @@ export class AusbildungenListeComponent implements OnInit {
     
     // Datenquelle aktualisieren
     this.dataSource.data = filteredAusbildungen;
+
+    // Log zur Fehlerbehebung
+    console.log('Datenquelle aktualisiert:', this.dataSource.data);
   }
 
   /**
    * Zur Detailseite einer Ausbildung navigieren
    */
   viewAusbildung(ausbildung: Ausbildung): void {
-    this.router.navigate(['/ausbildungen', ausbildung.id]);
+    console.log('Navigiere zu Ausbildung:', ausbildung.id);
+    if (ausbildung && ausbildung.id) {
+      this.router.navigate(['/ausbildungen', ausbildung.id]);
+    } else {
+      this.showSnackBar('Fehler: Ausbildung hat keine ID');
+    }
   }
 
   /**
@@ -148,7 +167,11 @@ export class AusbildungenListeComponent implements OnInit {
    */
   editAusbildung(ausbildung: Ausbildung, event: Event): void {
     event.stopPropagation();
-    this.router.navigate(['/ausbildungen', ausbildung.id, 'bearbeiten']);
+    if (ausbildung && ausbildung.id) {
+      this.router.navigate(['/ausbildungen', ausbildung.id, 'bearbeiten']);
+    } else {
+      this.showSnackBar('Fehler: Ausbildung hat keine ID');
+    }
   }
 
   /**
@@ -156,6 +179,11 @@ export class AusbildungenListeComponent implements OnInit {
    */
   deleteAusbildung(ausbildung: Ausbildung, event: Event): void {
     event.stopPropagation();
+
+    if (!ausbildung || !ausbildung.id) {
+      this.showSnackBar('Fehler: Ausbildung hat keine ID');
+      return;
+    }
 
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
@@ -172,6 +200,7 @@ export class AusbildungenListeComponent implements OnInit {
         try {
           await this.ausbildungService.deleteAusbildung(ausbildung.id);
           this.showSnackBar('Ausbildung erfolgreich gelöscht');
+          this.loadAusbildungen();
         } catch (error) {
           console.error('Fehler beim Löschen der Ausbildung:', error);
           this.showSnackBar('Fehler beim Löschen der Ausbildung');
@@ -192,7 +221,11 @@ export class AusbildungenListeComponent implements OnInit {
    */
   erfasseTeilnahme(ausbildung: Ausbildung, event: Event): void {
     event.stopPropagation();
-    this.router.navigate(['/ausbildungen/teilnahmen', ausbildung.id]);
+    if (ausbildung && ausbildung.id) {
+      this.router.navigate(['/ausbildungen/teilnahmen', ausbildung.id]);
+    } else {
+      this.showSnackBar('Fehler: Ausbildung hat keine ID');
+    }
   }
 
   /**

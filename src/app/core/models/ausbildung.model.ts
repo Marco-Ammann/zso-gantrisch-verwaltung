@@ -3,16 +3,7 @@ export interface Ausbildung {
   titel: string;
   beschreibung?: string;
   jahr: number;
-  datum: Date | any;  startDatum?: Date;
-  endDatum?: Date;
-  einrueckZeitKader?: {
-      start?: Date;
-      ende?: Date;
-  };
-  einrueckZeitSoldaten?: {
-      start?: Date;
-      ende?: Date;
-  };
+  datum: Date | any;  // Flexible Definition für Firestore-Timestamp
   typ: 'WK' | 'LG' | 'KVK' | 'Übung' | 'Kurs';
   erforderlich: boolean;
 }

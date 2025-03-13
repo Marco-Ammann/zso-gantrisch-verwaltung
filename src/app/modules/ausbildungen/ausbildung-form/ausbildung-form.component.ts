@@ -1,4 +1,3 @@
-// src/app/modules/ausbildungen/ausbildung-form/ausbildung-form.component.ts
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -24,10 +23,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { AusbildungService } from '../../../core/services/ausbildung.service';
 import { Ausbildung } from '../../../core/models/ausbildung.model';
-import { CustomDateAdapter, CUSTOM_DATE_FORMATS } from '../../../core/utils/custom-date-adapter';
 import { DateAdapter, MAT_DATE_FORMATS, MAT_DATE_LOCALE } from '@angular/material/core';
-
-
+import { CustomDateAdapter, CUSTOM_DATE_FORMATS } from '../../../core/utils/custom-date-adapter';
 
 @Component({
   selector: 'app-ausbildung-form',
@@ -45,9 +42,7 @@ import { DateAdapter, MAT_DATE_FORMATS, MAT_DATE_LOCALE } from '@angular/materia
     MatDatepickerModule,
     MatNativeDateModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatDatepickerModule,
-
+    MatSnackBarModule
   ],
   providers: [
     { provide: MAT_DATE_LOCALE, useValue: 'de-CH' },
@@ -81,7 +76,7 @@ export class AusbildungFormComponent implements OnInit {
     { value: 'LG', label: 'Lehrgang' },
     { value: 'KVK', label: 'Kadervorbereitung' },
     { value: 'Übung', label: 'Übung' },
-    { value: 'Sitzung', label: 'Sitzung' }
+    { value: 'Kurs', label: 'Kurs' }
   ];
 
   constructor() {
@@ -90,6 +85,9 @@ export class AusbildungFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // isLoading direkt setzen, nicht in einem setTimeout (verhindert ExpressionChangedAfterItHasBeenCheckedError)
+    this.isLoading = true;
+
     // Prüfen, ob wir im Bearbeitungsmodus sind
     this.route.paramMap.subscribe(params => {
       const id = params.get('id');
@@ -97,11 +95,10 @@ export class AusbildungFormComponent implements OnInit {
         this.isEditMode = true;
         this.ausbildungId = id;
         this.loadAusbildung(id);
+      } else {
+        // Wenn keine ID vorhanden ist, isLoading zurücksetzen
+        this.isLoading = false;
       }
-    });
-
-    setTimeout(() => {
-      this.isLoading = true;
     });
   }
 
@@ -109,50 +106,21 @@ export class AusbildungFormComponent implements OnInit {
    * Erstellt die Formularstruktur
    */
   private createAusbildungForm(): FormGroup {
+    const currentYear = new Date().getFullYear();
     return this.fb.group({
       titel: ['', [Validators.required]],
       beschreibung: [''],
       typ: ['WK', [Validators.required]],
-      jahr: [new Date().getFullYear(), [Validators.required, Validators.min(2000), Validators.max(2100)]],
+      jahr: [currentYear, [Validators.required, Validators.min(2000), Validators.max(2100)]],
       datum: [new Date(), [Validators.required]],
-      erforderlich: [true, [Validators.required]]
+      erforderlich: [false] // Standard: Nicht erforderlich
     });
-  }
-
-  /**
-   * Benutzerdefinierter Validator für Datumsprüfungen
-   */
-  private datumValidator(group: FormGroup) {
-    const startDatum = group.get('startDatum')?.value;
-    const endDatum = group.get('endDatum')?.value;
-    const kaderStart = group.get('einrueckZeitKader.start')?.value;
-    const kaderEnde = group.get('einrueckZeitKader.ende')?.value;
-    const soldatenStart = group.get('einrueckZeitSoldaten.start')?.value;
-    const soldatenEnde = group.get('einrueckZeitSoldaten.ende')?.value;
-
-    // Prüfen, dass Enddatum nach Startdatum liegt
-    if (startDatum && endDatum && startDatum > endDatum) {
-      return { 'datumReihenfolge': true };
-    }
-
-    // Prüfen, dass Kader-Einrückzeiten korrekt sind
-    if (kaderStart && kaderEnde && kaderStart > kaderEnde) {
-      return { 'kaderDatumReihenfolge': true };
-    }
-
-    // Prüfen, dass Soldaten-Einrückzeiten korrekt sind
-    if (soldatenStart && soldatenEnde && soldatenStart > soldatenEnde) {
-      return { 'soldatenDatumReihenfolge': true };
-    }
-
-    return null;
   }
 
   /**
    * Lädt eine bestehende Ausbildung zum Bearbeiten
    */
   async loadAusbildung(id: string): Promise<void> {
-    
     try {
       const ausbildung = await this.ausbildungService.getAusbildungById(id);
 
@@ -165,12 +133,21 @@ export class AusbildungFormComponent implements OnInit {
           if (typeof ausbildung.datum.toDate === 'function') {
             datumValue = ausbildung.datum.toDate();
           } 
-          // Wenn es ein Date-Objekt oder String ist
-          else {
+          // Wenn es ein Date-Objekt ist
+          else if (ausbildung.datum instanceof Date) {
+            datumValue = ausbildung.datum;
+          }
+          // Wenn es ein String oder Number ist
+          else if (typeof ausbildung.datum === 'string' || typeof ausbildung.datum === 'number') {
             datumValue = new Date(ausbildung.datum);
           }
         }
-        
+
+        // Wenn kein gültiges Datum extrahiert werden konnte, aktuelles Datum verwenden
+        if (!datumValue || isNaN(datumValue.getTime())) {
+          datumValue = new Date();
+        }
+
         // Form patchen mit konvertiertem Datum
         this.ausbildungForm.patchValue({
           titel: ausbildung.titel,
@@ -178,7 +155,7 @@ export class AusbildungFormComponent implements OnInit {
           typ: ausbildung.typ,
           jahr: ausbildung.jahr,
           datum: datumValue,
-          erforderlich: ausbildung.erforderlich
+          erforderlich: ausbildung.erforderlich !== undefined ? ausbildung.erforderlich : false
         });
       } else {
         this.showSnackBar('Ausbildung nicht gefunden');
@@ -188,9 +165,7 @@ export class AusbildungFormComponent implements OnInit {
       console.error('Fehler beim Laden der Ausbildung:', error);
       this.showSnackBar('Fehler beim Laden der Ausbildungsdaten');
     } finally {
-      setTimeout(() => {
-        this.isLoading = false;
-      });
+      this.isLoading = false;
     }
   }
 
