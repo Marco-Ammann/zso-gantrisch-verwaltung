@@ -1,148 +1,321 @@
 .dashboard-container {
-    max-width: 1200px;
-    margin: 0 auto;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.dashboard-header {
+  margin-bottom: 30px;
+}
+
+.dashboard-title {
+  font-size: 28px;
+  font-weight: 500;
+  margin: 0 0 8px 0;
+  color: #333;
+}
+
+.dashboard-subtitle {
+  font-size: 16px;
+  color: #666;
+  margin: 0 0 4px 0;
+}
+
+.dashboard-date {
+  font-size: 14px;
+  color: #888;
+  margin: 0;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  
+  p {
+    margin-top: 16px;
+    color: #666;
+  }
+}
+
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  mat-card-content {
+    display: flex;
+    align-items: flex-start;
     padding: 20px;
   }
+}
+
+.stat-icon-container {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
   
-  .dashboard-header {
-    margin-bottom: 30px;
+  &.people {
+    background-color: rgba(33, 150, 243, 0.1);
   }
   
-  .dashboard-title {
-    font-size: 24px;
-    font-weight: 500;
-    margin: 0 0 8px 0;
-    color: #333;
+  &.courses {
+    background-color: rgba(255, 152, 0, 0.1);
   }
   
-  .dashboard-subtitle {
-    font-size: 16px;
-    color: #666;
-    margin: 0 0 4px 0;
+  &.tasks {
+    background-color: rgba(244, 67, 54, 0.1);
   }
   
-  .dashboard-date {
-    font-size: 14px;
-    color: #888;
-    margin: 0;
+  &.capacity {
+    background-color: rgba(76, 175, 80, 0.1);
+  }
+}
+
+.stat-icon {
+  font-size: 28px;
+  
+  &.people {
+    color: #2196F3;
   }
   
+  &.courses {
+    color: #FF9800;
+  }
+  
+  &.tasks {
+    color: #F44336;
+  }
+  
+  &.capacity {
+    color: #4CAF50;
+  }
+}
+
+.stat-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.stat-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 8px;
+}
+
+.stat-detail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.detail-label {
+  color: #666;
+}
+
+.detail-value {
+  font-weight: 500;
+  color: #333;
+}
+
+.dashboard-section {
+  margin-bottom: 30px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 20px 0;
+  color: #333;
+  border-bottom: 2px solid #FF7F00;
+  padding-bottom: 8px;
+  display: inline-block;
+}
+
+.quick-access-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.quick-access-button {
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 12px 16px;
+  
+  mat-icon {
+    margin-right: 8px;
+  }
+}
+
+.info-card {
+  border-left: 4px solid #FF7F00;
+  border-radius: 4px;
+  
+  mat-card-content {
+    padding: 16px;
+  }
+  
+  p {
+    margin: 0 0 10px 0;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.ausbildungen-table {
+  width: 100%;
+  
+  .mat-column-aktionen {
+    width: 100px;
+    text-align: center;
+  }
+  
+  .mat-column-teilnehmer {
+    width: 100px;
+    text-align: center;
+  }
+  
+  .mat-column-typ {
+    width: 100px;
+    text-align: center;
+  }
+  
+  .mat-column-jahr,
+  .mat-column-datum {
+    width: 120px;
+    text-align: center;
+  }
+}
+
+.ausbildung-row {
+  cursor: pointer;
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+}
+
+.ausbildung-title {
+  font-weight: 500;
+}
+
+.ausbildung-description {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 400px;
+}
+
+.teilnehmer-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.teilnehmer-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.typ-badge {
+  padding: 4px 8px;
+  border-radius: 16px;
+  font-size: 0.8em;
+  font-weight: 500;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.typ-WK {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.typ-LG {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.typ-KVK {
+  background-color: #fff8e1;
+  color: #f57f17;
+}
+
+.typ-Übung {
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.typ-Kurs {
+  background-color: #e8eaf6;
+  color: #3949ab;
+}
+
+@media (max-width: 768px) {
   .stats-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
+    grid-template-columns: 1fr;
   }
   
-  .stat-card {
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s, box-shadow 0.2s;
-    
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    }
-    
-    mat-card-content {
-      display: flex;
-      align-items: center;
-      padding: 15px;
-    }
-  }
-  
-  .stat-icon-container {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 15px;
-  }
-  
-  .stat-icon {
-    font-size: 28px;
-    
-    &.people {
-      color: #2196F3;
-    }
-    
-    &.courses {
-      color: #FF9800;
-    }
-    
-    &.tasks {
-      color: #F44336;
-    }
-    
-    &.capacity {
-      color: #4CAF50;
-    }
-  }
-  
-  .stat-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .stat-value {
-    font-size: 24px;
-    font-weight: 500;
-    margin-bottom: 5px;
-  }
-  
-  .stat-label {
-    font-size: 14px;
-    color: #666;
-  }
-  
-  .dashboard-section {
-    margin-bottom: 30px;
-  }
-  
-  .section-title {
-    font-size: 18px;
-    font-weight: 500;
-    margin: 0 0 15px 0;
-    color: #333;
-    border-bottom: 2px solid #FF7F00;
-    padding-bottom: 5px;
-    display: inline-block;
-  }
-  
-  .quick-access-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-bottom: 20px;
+  .stat-card mat-card-content {
+    padding: 15px;
   }
   
   .quick-access-button {
-    min-width: 150px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    
-    mat-icon {
-      margin-right: 8px;
-    }
+    width: 100%;
   }
-  
-  .info-card {
-    border-left: 4px solid #FF7F00;
-    border-radius: 4px;
-    
-    mat-card-content {
-      padding: 15px;
-    }
-    
-    p {
-      margin: 0 0 10px 0;
-      
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-  }
+}

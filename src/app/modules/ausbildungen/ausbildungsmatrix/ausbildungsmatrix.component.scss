@@ -1,0 +1,260 @@
+// src/app/modules/ausbildungen/ausbildungsmatrix/ausbildungsmatrix.component.scss
+.ausbildungsmatrix-container {
+    padding: 16px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  
+  .header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .page-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 500;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    
+    p {
+      margin-top: 16px;
+      color: #666;
+    }
+  }
+  
+  .filter-card {
+    margin-bottom: 16px;
+  }
+  
+  .filter-container {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .filter-field {
+    min-width: 150px;
+    flex: 1;
+  }
+  
+  .search-field {
+    min-width: 250px;
+    flex: 2;
+  }
+  
+  .matrix-card {
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+    max-height: 70vh;
+  }
+  
+  .matrix-table {
+    width: 100%;
+    
+    .name-column {
+      position: sticky;
+      left: 0;
+      background-color: white;
+      z-index: 1;
+      min-width: 250px;
+      max-width: 300px;
+    }
+    
+    .name-cell {
+      position: sticky;
+      left: 0;
+      background-color: white;
+      z-index: 1;
+      cursor: pointer;
+      
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+      }
+    }
+    
+    .ausbildung-column {
+      cursor: pointer;
+      min-width: 120px;
+      
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+      }
+    }
+  }
+  
+  .person-info {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0;
+  }
+  
+  .person-name {
+    font-weight: 500;
+  }
+  
+  .person-additional {
+    font-size: 12px;
+    color: #666;
+  }
+  
+  .ausbildung-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0;
+  }
+  
+  .ausbildung-title {
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+  
+  .ausbildung-type-badge {
+    margin-top: 4px;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 0.7em;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  
+  .typ-WK {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+  }
+  
+  .typ-LG {
+    background-color: #e3f2fd;
+    color: #1565c0;
+  }
+  
+  .typ-KVK {
+    background-color: #fff8e1;
+    color: #f57f17;
+  }
+  
+  .typ-Übung {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+  }
+  
+  .typ-Kurs {
+    background-color: #e8eaf6;
+    color: #3949ab;
+  }
+  
+  .teilnahme-cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 40px;
+    
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+    
+    &.teilgenommen {
+      color: #4caf50;
+    }
+    
+    &.dispensiert {
+      color: #ff9800;
+    }
+    
+    &.nicht-teilgenommen {
+      color: #f44336;
+    }
+    
+    &.empty {
+      color: #bdbdbd;
+    }
+  }
+  
+  .no-data-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #666;
+    
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+      color: #bdbdbd;
+    }
+  }
+  
+  .no-data-row {
+    height: 200px;
+  }
+  
+  .no-data-cell {
+    text-align: center;
+  }
+  
+  .legend-card {
+    margin-bottom: 16px;
+  }
+  
+  .legend-title {
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  
+  .legend-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .legend-text {
+    font-size: 14px;
+  }
+  
+  // Responsive Anpassungen
+  @media (max-width: 768px) {
+    .filter-container {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .filter-field, .search-field {
+      width: 100%;
+    }
+  }

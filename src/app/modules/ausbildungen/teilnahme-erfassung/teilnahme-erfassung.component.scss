@@ -1,0 +1,253 @@
+// src/app/modules/ausbildungen/teilnahme-erfassung/teilnahme-erfassung.component.scss
+.teilnahme-erfassung-container {
+    padding: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  .back-button-container {
+    margin-bottom: 16px;
+  }
+  
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    
+    p {
+      margin-top: 16px;
+      color: #666;
+    }
+  }
+  
+  .error-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f44336;
+    padding: 20px;
+    
+    mat-icon {
+      margin-right: 8px;
+    }
+  }
+  
+  .header-card {
+    margin-bottom: 16px;
+  }
+  
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .ausbildung-info {
+    flex: 1;
+    min-width: 300px;
+  }
+  
+  .page-title {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+    font-weight: 500;
+  }
+  
+  .ausbildung-title-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  
+  .ausbildung-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 500;
+  }
+  
+  .ausbildung-description {
+    color: #666;
+    font-size: 14px;
+  }
+  
+  .typ-badge {
+    padding: 4px 8px;
+    border-radius: 16px;
+    font-size: 0.8em;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  
+  .typ-WK {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+  }
+  
+  .typ-LG {
+    background-color: #e3f2fd;
+    color: #1565c0;
+  }
+  
+  .typ-KVK {
+    background-color: #fff8e1;
+    color: #f57f17;
+  }
+  
+  .typ-Übung {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+  }
+  
+  .typ-Kurs {
+    background-color: #e8eaf6;
+    color: #3949ab;
+  }
+  
+  .settings-card {
+    margin-bottom: 16px;
+  }
+  
+  .settings-form {
+    padding: 8px;
+  }
+  
+  .settings-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    
+    mat-form-field {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      min-width: 200px;
+    }
+  }
+  
+  .table-card {
+    margin-bottom: 16px;
+  }
+  
+  .filter-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .search-field {
+    flex: 1;
+    min-width: 300px;
+    max-width: 500px;
+  }
+  
+  .status-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .status-label {
+    font-size: 14px;
+    color: #666;
+    white-space: nowrap;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+    max-height: 600px;
+    overflow-y: auto;
+  }
+  
+  .teilnehmer-table {
+    width: 100%;
+    
+    .mat-column-select {
+      width: 60px;
+      text-align: center;
+    }
+    
+    .mat-column-grad {
+      width: 100px;
+    }
+    
+    .mat-column-zug {
+      width: 80px;
+    }
+    
+    .mat-column-status {
+      width: 200px;
+    }
+    
+    .mat-column-bemerkung {
+      min-width: 200px;
+    }
+  }
+  
+  .status-field, .bemerkung-field {
+    width: 100%;
+    margin: -8px 0;
+    
+    ::ng-deep .mat-mdc-form-field-infix {
+      padding: 8px 0;
+      min-height: 32px;
+    }
+  }
+  
+  .existing-row {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+  
+  .no-data-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #666;
+    
+    mat-icon {
+      margin-right: 8px;
+    }
+  }
+  
+  .card-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 16px;
+    gap: 8px;
+  }
+  
+  // Responsive Anpassungen
+  @media (max-width: 600px) {
+    .settings-row {
+      flex-direction: column;
+      align-items: stretch;
+      
+      .action-buttons {
+        justify-content: flex-end;
+      }
+    }
+    
+    .filter-container {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .search-field {
+      width: 100%;
+      max-width: none;
+    }
+  }
