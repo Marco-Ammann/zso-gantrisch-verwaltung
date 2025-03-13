@@ -159,17 +159,8 @@ export class AusbildungFormComponent implements OnInit {
           titel: ausbildung.titel,
           beschreibung: ausbildung.beschreibung || '',
           typ: ausbildung.typ,
-          startDatum: ausbildung.startDatum || null,
-          endDatum: ausbildung.endDatum || null,
-          einrueckZeitKader: {
-            start: ausbildung.einrueckZeitKader?.start || null,
-            ende: ausbildung.einrueckZeitKader?.ende || null
-          },
-          einrueckZeitSoldaten: {
-            start: ausbildung.einrueckZeitSoldaten?.start || null,
-            ende: ausbildung.einrueckZeitSoldaten?.ende || null
-          },
           jahr: ausbildung.jahr,
+          datum: ausbildung.datum,
           erforderlich: ausbildung.erforderlich
         });
       } else {
@@ -201,16 +192,14 @@ export class AusbildungFormComponent implements OnInit {
 
       // Stelle sicher, dass nur gültige Daten gespeichert werden
       const ausbildungData: Ausbildung = {
+        id: this.isEditMode ? this.ausbildungId! : '',  // id ist erforderlich
         titel: formValue.titel,
         beschreibung: formValue.beschreibung,
         typ: formValue.typ,
-        startDatum: formValue.startDatum,
-        endDatum: formValue.endDatum,
-        einrueckZeitKader: formValue.einrueckZeitKader.start ? formValue.einrueckZeitKader : undefined,
-        einrueckZeitSoldaten: formValue.einrueckZeitSoldaten.start ? formValue.einrueckZeitSoldaten : undefined,
-        jahr: formValue.startDatum ? new Date(formValue.startDatum).getFullYear() : formValue.jahr,
+        datum: formValue.datum,  // datum ist erforderlich 
+        jahr: formValue.jahr,
         erforderlich: formValue.erforderlich
-      } as Ausbildung;
+      };
 
       if (this.isEditMode && this.ausbildungId) {
         // Bestehende Ausbildung aktualisieren
