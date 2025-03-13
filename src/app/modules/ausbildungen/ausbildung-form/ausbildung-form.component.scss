@@ -1,0 +1,75 @@
+// src/app/modules/ausbildungen/ausbildung-form/ausbildung-form.component.scss
+.ausbildung-form-container {
+    padding: 16px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .page-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 500;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    
+    p {
+      margin-top: 16px;
+      color: #666;
+    }
+  }
+  
+  .form-row {
+    margin-bottom: 16px;
+    
+    mat-form-field {
+      width: 100%;
+    }
+    
+    &.two-cols {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    
+    &.checkbox-row {
+      margin-top: 8px;
+    }
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 8px 16px 16px;
+  }
+  
+  @media (max-width: 768px) {
+    .form-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .form-row.two-cols {
+      grid-template-columns: 1fr;
+    }
+  }

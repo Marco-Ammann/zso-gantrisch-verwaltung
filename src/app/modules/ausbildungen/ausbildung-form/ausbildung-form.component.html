@@ -1,0 +1,114 @@
+<!-- src/app/modules/ausbildungen/ausbildung-form/ausbildung-form.component.html -->
+<div class="ausbildung-form-container">
+    <div class="form-header">
+      <h1 class="page-title">
+        {{ isEditMode ? "Ausbildung bearbeiten" : "Neue Ausbildung erstellen" }}
+      </h1>
+  
+      <div class="action-buttons">
+        <button mat-button color="primary" (click)="cancel()">Abbrechen</button>
+  
+        <button
+          mat-raised-button
+          color="primary"
+          [disabled]="ausbildungForm.invalid || isSaving"
+          (click)="saveAusbildung()"
+        >
+          <mat-icon>save</mat-icon>
+          {{ isSaving ? "Wird gespeichert..." : "Speichern" }}
+        </button>
+      </div>
+    </div>
+  
+    @if (isLoading) {
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Daten werden geladen...</p>
+      </div>
+    } @else {
+      <mat-card>
+        <mat-card-content>
+          <form [formGroup]="ausbildungForm">
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Titel</mat-label>
+                <input
+                  matInput
+                  formControlName="titel"
+                  placeholder="Titel der Ausbildung"
+                />
+                @if (hasError('titel', 'required')) {
+                  <mat-error>Titel ist erforderlich</mat-error>
+                }
+              </mat-form-field>
+            </div>
+  
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Beschreibung (optional)</mat-label>
+                <textarea
+                  matInput
+                  formControlName="beschreibung"
+                  placeholder="Kurze Beschreibung der Ausbildung"
+                  rows="3"
+                ></textarea>
+              </mat-form-field>
+            </div>
+  
+            <div class="form-row two-cols">
+              <mat-form-field appearance="outline">
+                <mat-label>Typ</mat-label>
+                <mat-select formControlName="typ">
+                  @for (option of typOptions; track option.value) {
+                    <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                  }
+                </mat-select>
+                @if (hasError('typ', 'required')) {
+                  <mat-error>Typ ist erforderlich</mat-error>
+                }
+              </mat-form-field>
+  
+              <mat-form-field appearance="outline">
+                <mat-label>Jahr</mat-label>
+                <input
+                  matInput
+                  type="number"
+                  formControlName="jahr"
+                  placeholder="z.B. 2025"
+                />
+                @if (hasError('jahr', 'required')) {
+                  <mat-error>Jahr ist erforderlich</mat-error>
+                } @else if (hasError('jahr', 'min')) {
+                  <mat-error>Jahr muss mindestens 2000 sein</mat-error>
+                } @else if (hasError('jahr', 'max')) {
+                  <mat-error>Jahr darf höchstens 2100 sein</mat-error>
+                }
+              </mat-form-field>
+            </div>
+  
+            <div class="form-row checkbox-row">
+              <mat-checkbox formControlName="erforderlich">
+                Diese Ausbildung ist für Betreuer erforderlich
+              </mat-checkbox>
+            </div>
+          </form>
+        </mat-card-content>
+  
+        <mat-card-actions>
+          <div class="form-actions">
+            <button mat-button color="primary" (click)="cancel()">Abbrechen</button>
+  
+            <button
+              mat-raised-button
+              color="primary"
+              [disabled]="ausbildungForm.invalid || isSaving"
+              (click)="saveAusbildung()"
+            >
+              <mat-icon>save</mat-icon>
+              {{ isSaving ? "Wird gespeichert..." : "Speichern" }}
+            </button>
+          </div>
+        </mat-card-actions>
+      </mat-card>
+    }
+  </div>
