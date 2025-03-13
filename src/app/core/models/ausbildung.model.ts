@@ -3,9 +3,7 @@ export interface Ausbildung {
   titel: string;
   beschreibung?: string;
   jahr: number;
-  datum: Date;
-  // Neue Felder hinzufügen (optional, für rückwärtskompatibilität)
-  startDatum?: Date;
+  datum: Date | any;  startDatum?: Date;
   endDatum?: Date;
   einrueckZeitKader?: {
       start?: Date;

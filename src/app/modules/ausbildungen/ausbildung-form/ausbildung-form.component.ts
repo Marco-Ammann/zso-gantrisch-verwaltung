@@ -99,6 +99,10 @@ export class AusbildungFormComponent implements OnInit {
         this.loadAusbildung(id);
       }
     });
+
+    setTimeout(() => {
+      this.isLoading = true;
+    });
   }
 
   /**
@@ -148,19 +152,32 @@ export class AusbildungFormComponent implements OnInit {
    * Lädt eine bestehende Ausbildung zum Bearbeiten
    */
   async loadAusbildung(id: string): Promise<void> {
-    this.isLoading = true;
-
+    
     try {
       const ausbildung = await this.ausbildungService.getAusbildungById(id);
 
       if (ausbildung) {
-        // Formular mit den Daten der Ausbildung befüllen
+        // Datum korrekt konvertieren, wenn es ein Firestore Timestamp ist
+        let datumValue: Date | null = null;
+        
+        if (ausbildung.datum) {
+          // Wenn es ein Firestore Timestamp ist
+          if (typeof ausbildung.datum.toDate === 'function') {
+            datumValue = ausbildung.datum.toDate();
+          } 
+          // Wenn es ein Date-Objekt oder String ist
+          else {
+            datumValue = new Date(ausbildung.datum);
+          }
+        }
+        
+        // Form patchen mit konvertiertem Datum
         this.ausbildungForm.patchValue({
           titel: ausbildung.titel,
           beschreibung: ausbildung.beschreibung || '',
           typ: ausbildung.typ,
           jahr: ausbildung.jahr,
-          datum: ausbildung.datum,
+          datum: datumValue,
           erforderlich: ausbildung.erforderlich
         });
       } else {
@@ -171,7 +188,9 @@ export class AusbildungFormComponent implements OnInit {
       console.error('Fehler beim Laden der Ausbildung:', error);
       this.showSnackBar('Fehler beim Laden der Ausbildungsdaten');
     } finally {
-      this.isLoading = false;
+      setTimeout(() => {
+        this.isLoading = false;
+      });
     }
   }
 
