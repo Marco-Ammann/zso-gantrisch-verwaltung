@@ -50,26 +50,36 @@
 
           <div class="form-row two-cols">
             <mat-form-field appearance="outline">
-                <mat-label>Nachname</mat-label>
-                <input matInput formControlName="nachname" placeholder="Nachname eingeben">
-                @if (hasError('grunddaten.nachname', 'required')) {
-                  <mat-error>Nachname ist erforderlich</mat-error>
-                }
-              </mat-form-field>
+              <mat-label>Nachname</mat-label>
+              <input
+                matInput
+                formControlName="nachname"
+                placeholder="Nachname eingeben"
+              />
+              @if (hasError('grunddaten.nachname', 'required')) {
+              <mat-error>Nachname ist erforderlich</mat-error>
+              }
+            </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Vorname</mat-label>
-                <input matInput formControlName="vorname" placeholder="Vorname eingeben">
-                @if (hasError('grunddaten.vorname', 'required')) {
-                  <mat-error>Vorname ist erforderlich</mat-error>
-                }
-              </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Vorname</mat-label>
+              <input
+                matInput
+                formControlName="vorname"
+                placeholder="Vorname eingeben"
+              />
+              @if (hasError('grunddaten.vorname', 'required')) {
+              <mat-error>Vorname ist erforderlich</mat-error>
+              }
+            </mat-form-field>
           </div>
 
           <div class="form-row two-cols">
             <mat-form-field appearance="outline">
               <mat-label>Funktion</mat-label>
-              <input matInput formControlName="funktion" />
+              <input matInput formControlName="funktion"
+                placeholder="z.B Betreuer, Betreuer Of, etc."
+              />
               @if (hasError('grunddaten.funktion', 'required')) {
               <mat-error>Funktion ist erforderlich</mat-error>
               }
@@ -126,34 +136,43 @@
 
           <div class="form-row two-cols">
             <mat-form-field appearance="outline">
-                <mat-label>PLZ</mat-label>
-                <input matInput formControlName="plz" placeholder="1234">
-                @if (hasError('kontaktdaten.plz', 'required')) {
-                  <mat-error>PLZ ist erforderlich</mat-error>
-                } @else if (hasError('kontaktdaten.plz', 'pattern')) {
-                  <mat-error>Bitte eine gültige PLZ eingeben (4 Ziffern)</mat-error>
-                }
-              </mat-form-field>
+              <mat-label>PLZ</mat-label>
+              <input matInput formControlName="plz" placeholder="1234" />
+              @if (hasError('kontaktdaten.plz', 'required')) {
+              <mat-error>PLZ ist erforderlich</mat-error>
+              } @else if (hasError('kontaktdaten.plz', 'pattern')) {
+              <mat-error>Bitte eine gültige PLZ eingeben (4 Ziffern)</mat-error>
+              }
+            </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Ort</mat-label>
-                <input matInput formControlName="ort" placeholder="Ortschaft eingeben">
-                @if (hasError('kontaktdaten.ort', 'required')) {
-                  <mat-error>Ort ist erforderlich</mat-error>
-                }
-              </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Ort</mat-label>
+              <input
+                matInput
+                formControlName="ort"
+                placeholder="Ortschaft eingeben"
+              />
+              @if (hasError('kontaktdaten.ort', 'required')) {
+              <mat-error>Ort ist erforderlich</mat-error>
+              }
+            </mat-form-field>
           </div>
 
           <div class="form-row">
             <mat-form-field appearance="outline">
-                <mat-label>E-Mail</mat-label>
-                <input matInput type="email" formControlName="email" placeholder="beispiel@domain.ch">
-                @if (hasError('kontaktdaten.email', 'required')) {
-                  <mat-error>E-Mail ist erforderlich</mat-error>
-                } @else if (hasError('kontaktdaten.email', 'email')) {
-                  <mat-error>Bitte eine gültige E-Mail-Adresse eingeben</mat-error>
-                }
-              </mat-form-field>
+              <mat-label>E-Mail</mat-label>
+              <input
+                matInput
+                type="email"
+                formControlName="email"
+                placeholder="beispiel@domain.ch"
+              />
+              @if (hasError('kontaktdaten.email', 'required')) {
+              <mat-error>E-Mail ist erforderlich</mat-error>
+              } @else if (hasError('kontaktdaten.email', 'email')) {
+              <mat-error>Bitte eine gültige E-Mail-Adresse eingeben</mat-error>
+              }
+            </mat-form-field>
           </div>
 
           <div class="form-row">
