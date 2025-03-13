@@ -1,0 +1,193 @@
+// src/app/modules/ausbildungen/ausbildung-detail/ausbildung-detail.component.scss
+.ausbildung-detail-container {
+    padding: 16px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .back-button-container {
+    margin-bottom: 16px;
+  }
+  
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    
+    p {
+      margin-top: 16px;
+      color: #666;
+    }
+  }
+  
+  .error-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f44336;
+    padding: 20px;
+    
+    mat-icon {
+      margin-right: 8px;
+    }
+  }
+  
+  .header-card {
+    margin-bottom: 20px;
+  }
+  
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  
+  .ausbildung-info {
+    flex: 1;
+    min-width: 300px;
+  }
+  
+  .ausbildung-title-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  
+  .ausbildung-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 500;
+  }
+  
+  .typ-badge {
+    padding: 4px 8px;
+    border-radius: 16px;
+    font-size: 0.8em;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  
+  .typ-WK {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+  }
+  
+  .typ-LG {
+    background-color: #e3f2fd;
+    color: #1565c0;
+  }
+  
+  .typ-KVK {
+    background-color: #fff8e1;
+    color: #f57f17;
+  }
+  
+  .typ-Übung {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+  }
+  
+  .typ-Kurs {
+    background-color: #e8eaf6;
+    color: #3949ab;
+  }
+  
+  .ausbildung-description {
+    color: #666;
+    margin-bottom: 16px;
+    font-size: 16px;
+  }
+  
+  .ausbildung-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 12px;
+  }
+  
+  .detail-item {
+    display: flex;
+    align-items: center;
+    color: #555;
+    
+    mat-icon {
+      margin-right: 4px;
+      font-size: 18px;
+      height: 18px;
+      width: 18px;
+    }
+  }
+  
+  .action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .content-card {
+    margin-bottom: 20px;
+  }
+  
+  .no-data-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #666;
+    
+    mat-icon {
+      margin-right: 8px;
+      color: #999;
+    }
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  .teilnahmen-table {
+    width: 100%;
+  }
+  
+  .status-badge {
+    padding: 4px 8px;
+    border-radius: 16px;
+    font-size: 0.8em;
+    font-weight: 500;
+  }
+  
+  .status-teilgenommen {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+  }
+  
+  .status-dispensiert {
+    background-color: #fff8e1;
+    color: #f57f17;
+  }
+  
+  .status-nicht {
+    background-color: #ffebee;
+    color: #c62828;
+  }
+  
+  .action-buttons-small {
+    display: flex;
+    justify-content: center;
+  }
+  
+  @media (max-width: 768px) {
+    .header-content {
+      flex-direction: column;
+    }
+    
+    .action-buttons {
+      width: 100%;
+      justify-content: flex-start;
+    }
+  }
