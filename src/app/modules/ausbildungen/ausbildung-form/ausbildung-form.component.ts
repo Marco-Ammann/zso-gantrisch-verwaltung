@@ -178,30 +178,37 @@ export class AusbildungFormComponent implements OnInit {
       this.showSnackBar('Bitte überprüfen Sie die Eingaben');
       return;
     }
-
+  
     this.isSaving = true;
-
+  
     try {
       const formValue = this.ausbildungForm.value;
-
-      // Stelle sicher, dass nur gültige Daten gespeichert werden
-      const ausbildungData: Ausbildung = {
-        id: this.isEditMode ? this.ausbildungId! : '',  // id ist erforderlich
-        titel: formValue.titel,
-        beschreibung: formValue.beschreibung,
-        typ: formValue.typ,
-        datum: formValue.datum,  // datum ist erforderlich 
-        jahr: formValue.jahr,
-        erforderlich: formValue.erforderlich
-      };
-
+  
       if (this.isEditMode && this.ausbildungId) {
         // Bestehende Ausbildung aktualisieren
+        const ausbildungData: Partial<Ausbildung> = {
+          titel: formValue.titel,
+          beschreibung: formValue.beschreibung,
+          typ: formValue.typ,
+          datum: formValue.datum,
+          jahr: formValue.jahr,
+          erforderlich: formValue.erforderlich
+        };
+        
         await this.ausbildungService.updateAusbildung(this.ausbildungId, ausbildungData);
         this.showSnackBar('Ausbildung erfolgreich aktualisiert');
         this.router.navigate(['/ausbildungen', this.ausbildungId]);
       } else {
-        // Neue Ausbildung erstellen
+        // Neue Ausbildung erstellen - OHNE ID-Feld
+        const ausbildungData = {
+          titel: formValue.titel,
+          beschreibung: formValue.beschreibung,
+          typ: formValue.typ,
+          datum: formValue.datum,
+          jahr: formValue.jahr,
+          erforderlich: formValue.erforderlich
+        };
+        
         const newId = await this.ausbildungService.createAusbildung(ausbildungData);
         this.showSnackBar('Ausbildung erfolgreich erstellt');
         this.router.navigate(['/ausbildungen', newId]);
