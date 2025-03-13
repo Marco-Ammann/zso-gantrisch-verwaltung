@@ -86,7 +86,7 @@ export class PersonFormComponent implements OnInit {
   
   // Dropdown-Optionen
   gradOptions = [
-    'Zivilschützer', 'Gefreiter', 'Korporal', 'Wachtmeister', 
+    'Soldat', 'Gefreiter', 'Korporal', 'Wachtmeister', 
     'Feldweibel', 'Fourier', 'Adjutant Unteroffizier', 'Leutnant', 
     'Oberleutnant', 'Hauptmann'
   ];
@@ -124,7 +124,7 @@ export class PersonFormComponent implements OnInit {
       grunddaten: this.fb.group({
       vorname: ['', [Validators.required]],
       nachname: ['', [Validators.required]],
-      grad: ['Zivilschützer', [Validators.required]],
+      grad: ['Soldat', [Validators.required]],
       funktion: ['', [Validators.required]],
       geburtsdatum: [null, [Validators.required]]
       }),
