@@ -1,0 +1,169 @@
+// src/app/modules/ausbildungen/ausbildungen-liste/ausbildungen-liste.component.scss
+.ausbildungen-liste-container {
+    padding: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  .header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    gap: 16px;
+  }
+  
+  .title-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .page-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 500;
+  }
+  
+  .action-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  
+  .search-field {
+    width: 300px;
+  }
+  
+  .filter-field {
+    width: 150px;
+  }
+  
+  .add-button {
+    height: 40px;
+  }
+  
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    
+    p {
+      margin-top: 16px;
+      color: #666;
+    }
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  .ausbildungen-table {
+    width: 100%;
+    
+    .mat-column-aktionen {
+      width: 160px;
+      text-align: center;
+    }
+    
+    .mat-column-typ,
+    .mat-column-jahr,
+    .mat-column-erforderlich {
+      width: 120px;
+      text-align: center;
+    }
+  }
+  
+  .action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+  }
+  
+  .ausbildung-titel {
+    font-weight: 500;
+  }
+  
+  .ausbildung-beschreibung {
+    font-size: 0.9em;
+    color: #666;
+    max-width: 400px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .typ-badge {
+    padding: 4px 8px;
+    border-radius: 16px;
+    font-size: 0.8em;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  
+  .typ-WK {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+  }
+  
+  .typ-LG {
+    background-color: #e3f2fd;
+    color: #1565c0;
+  }
+  
+  .typ-KVK {
+    background-color: #fff8e1;
+    color: #f57f17;
+  }
+  
+  .typ-Übung {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+  }
+  
+  .typ-Kurs {
+    background-color: #e8eaf6;
+    color: #3949ab;
+  }
+  
+  .empty-row {
+    padding: 16px;
+    text-align: center;
+  }
+  
+  .no-data-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #888;
+  }
+  
+  .ausbildung-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .header-section {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .search-field,
+    .filter-field {
+      width: 100%;
+    }
+    
+    .action-section {
+      width: 100%;
+    }
+  }
