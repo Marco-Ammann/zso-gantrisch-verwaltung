@@ -1,0 +1,25 @@
+// src/app/modules/personen/notfallkontakte/kontakt-dialog/kontakt-dialog.component.scss
+.full-width {
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  
+  .radio-group {
+    margin-bottom: 16px;
+  }
+  
+  .radio-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  
+  .radio-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  mat-error {
+    font-size: 12px;
+  }

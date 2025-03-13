@@ -1,0 +1,204 @@
+<!-- src/app/modules/personen/personen-liste/personen-liste.component.html -->
+<div class="personen-liste-container">
+  <div class="header-section">
+    <div class="title-section">
+      <h1 class="page-title">Personen</h1>
+      <div class="status-chips">
+        <mat-chip-option
+          color="primary"
+          [selected]="selectedStatus() === 'alle'"
+          (click)="setStatusFilter('alle')"
+          [matBadge]="personenCount().total"
+          matBadgePosition="after"
+          matBadgeColor="accent"
+        >
+          Alle
+        </mat-chip-option>
+        <mat-chip-option
+          color="primary"
+          [selected]="selectedStatus() === 'aktiv'"
+          (click)="setStatusFilter('aktiv')"
+          [matBadge]="personenCount().aktiv"
+          matBadgePosition="after"
+          matBadgeColor="accent"
+        >
+          Aktiv
+        </mat-chip-option>
+        <mat-chip-option
+          color="primary"
+          [selected]="selectedStatus() === 'inaktiv'"
+          (click)="setStatusFilter('inaktiv')"
+          [matBadge]="personenCount().inaktiv"
+          matBadgePosition="after"
+          matBadgeColor="accent"
+        >
+          Inaktiv
+        </mat-chip-option>
+        <mat-chip-option
+          color="primary"
+          [selected]="selectedStatus() === 'neu'"
+          (click)="setStatusFilter('neu')"
+          [matBadge]="personenCount().neu"
+          matBadgePosition="after"
+          matBadgeColor="accent"
+        >
+          Neu
+        </mat-chip-option>
+      </div>
+    </div>
+
+    <div class="action-section">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Suchen</mat-label>
+        <input
+          matInput
+          [formControl]="searchControl"
+          placeholder="Name, Grad, Ort..."
+        />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      @if (canEdit()) {
+      <button
+        mat-raised-button
+        color="primary"
+        class="add-button"
+        (click)="createPerson()"
+      >
+        <mat-icon>add</mat-icon>
+        Neue Person
+      </button>
+      }
+    </div>
+  </div>
+
+  <mat-card>
+    <div class="table-container">
+      <table mat-table [dataSource]="dataSource" matSort class="personen-table">
+        <!-- Grad -->
+        <ng-container matColumnDef="grad">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Grad</th>
+          <td mat-cell *matCellDef="let person">
+            {{ person.grunddaten.grad }}
+          </td>
+        </ng-container>
+
+        <!-- Name -->
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
+          <td mat-cell *matCellDef="let person">
+            {{ person.grunddaten.nachname }} {{ person.grunddaten.vorname }}
+          </td>
+        </ng-container>
+
+        <!-- Funktion -->
+        <ng-container matColumnDef="funktion">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Funktion</th>
+          <td mat-cell *matCellDef="let person">
+            {{ person.grunddaten.funktion }}
+          </td>
+        </ng-container>
+
+        <!-- Kontakt -->
+        <ng-container matColumnDef="kontakt">
+          <th mat-header-cell *matHeaderCellDef>Kontakt</th>
+          <td mat-cell *matCellDef="let person">
+            <div class="kontakt-info">
+              <div>{{ person.kontaktdaten.telefonMobil }}</div>
+              <div class="email">{{ person.kontaktdaten.email }}</div>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Zug -->
+        <ng-container matColumnDef="zug">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Zug</th>
+          <td mat-cell *matCellDef="let person">
+            {{ person.zivilschutz.einteilung.zug }}
+          </td>
+        </ng-container>
+
+        <!-- Status -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+          <td mat-cell *matCellDef="let person">
+            <span
+              class="status-badge"
+              [ngClass]="getStatusColorClass(person.zivilschutz.status)"
+            >
+              {{ formatStatus(person.zivilschutz.status) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Aktionen -->
+        <ng-container matColumnDef="aktionen">
+          <th mat-header-cell *matHeaderCellDef>Aktionen</th>
+          <td mat-cell *matCellDef="let person">
+            <div class="action-buttons">
+              <!-- Anzeigen -->
+              <button
+                mat-icon-button
+                color="primary"
+                matTooltip="Details anzeigen"
+                (click)="viewPerson(person)"
+              >
+                <mat-icon>visibility</mat-icon>
+              </button>
+
+              <!-- Bearbeiten (nur mit entsprechender Berechtigung) -->
+              @if (canEdit()) {
+              <button
+                mat-icon-button
+                color="accent"
+                matTooltip="Bearbeiten"
+                (click)="editPerson(person); $event.stopPropagation()"
+              >
+                <mat-icon>edit</mat-icon>
+              </button>
+              }
+
+              <!-- Löschen (nur mit entsprechender Berechtigung) -->
+              @if (canDelete()) {
+              <button
+                mat-icon-button
+                color="warn"
+                matTooltip="Löschen"
+                (click)="deletePerson(person, $event)"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+              }
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Tabellenzeilen -->
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: displayedColumns"
+          (click)="viewPerson(row)"
+          class="person-row"
+        ></tr>
+
+        <!-- Leere Zeile wenn keine Daten -->
+        <tr class="mat-row" *matNoDataRow>
+          <td
+            class="mat-cell empty-row"
+            [attr.colspan]="displayedColumns.length"
+          >
+            <div class="no-data-message">
+              <mat-icon>search_off</mat-icon>
+              <span>Keine Personen gefunden</span>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Paginierung -->
+    <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" showFirstLastButtons>
+    </mat-paginator>
+  </mat-card>
+</div>

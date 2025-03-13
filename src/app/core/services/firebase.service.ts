@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, NgZone } from '@angular/core';
 import { 
   Firestore, 
   collection, 
@@ -12,7 +12,8 @@ import {
   where, 
   getDocs,
   orderBy,
-  serverTimestamp
+  serverTimestamp,
+  getDoc
 } from '@angular/fire/firestore';
 import { 
   Storage, 
@@ -31,6 +32,16 @@ import {
 export class FirebaseService {
   private firestore: Firestore = inject(Firestore);
   private storage: Storage = inject(Storage);
+  private ngZone = inject(NgZone);
+
+    // Hilfsmethode für zonenkonforme API-Aufrufe
+    private runInZone<T>(fn: () => Promise<T>): Promise<T> {
+      return this.ngZone.runOutsideAngular(() => fn()).then(result => {
+        return this.ngZone.run(() => result);
+      });
+    }
+
+
 
   /**
    * Gibt eine Referenz auf eine Kollektion zurück
@@ -56,10 +67,13 @@ export class FirebaseService {
    * @param collectionName Name der Kollektion
    * @returns Promise mit Array aller Dokumente
    */
+  // Passt alle Methoden an, z.B.:
   async getAll<T>(collectionName: string): Promise<T[]> {
-    const collectionRef = this.getCollection(collectionName);
-    const snapshot = await getDocs(collectionRef);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    return this.runInZone(async () => {
+      const collectionRef = this.getCollection(collectionName);
+      const snapshot = await getDocs(collectionRef);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    });
   }
 
   /**
@@ -69,14 +83,16 @@ export class FirebaseService {
    * @returns Promise mit Dokumentdaten
    */
   async getById<T>(collectionName: string, id: string): Promise<T | null> {
-    const docRef = this.getDocument(collectionName, id);
-    const docSnap = await docData(docRef).toPromise();
-    
-    if (docSnap) {
-      return { id, ...docSnap } as T;
-    } else {
-      return null;
-    }
+    return this.runInZone(async () => {
+      const docRef = this.getDocument(collectionName, id);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return { id, ...docSnap.data() } as T;
+      } else {
+        return null;
+      }
+    });
   }
 
   /**
@@ -93,10 +109,12 @@ export class FirebaseService {
     operator: any, 
     value: any
   ): Promise<T[]> {
-    const collectionRef = this.getCollection(collectionName);
-    const q = query(collectionRef, where(field, operator, value));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    return this.runInZone(async () => {
+      const collectionRef = this.getCollection(collectionName);
+      const q = query(collectionRef, where(field, operator, value));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    });
   }
 
   /**
@@ -111,10 +129,12 @@ export class FirebaseService {
     orderByField: string, 
     direction: 'asc' | 'desc' = 'asc'
   ): Promise<T[]> {
-    const collectionRef = this.getCollection(collectionName);
-    const q = query(collectionRef, orderBy(orderByField, direction));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    return this.runInZone(async () => {
+      const collectionRef = this.getCollection(collectionName);
+      const q = query(collectionRef, orderBy(orderByField, direction));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    });
   }
 
   /**

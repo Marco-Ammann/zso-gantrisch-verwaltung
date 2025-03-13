@@ -1,0 +1,145 @@
+// src/app/modules/personen/personen-liste/personen-liste.component.scss
+.personen-liste-container {
+    padding: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  .header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    gap: 16px;
+  }
+  
+  .title-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .page-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 500;
+  }
+  
+  .status-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .action-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .search-field {
+    width: 300px;
+  }
+  
+  .add-button {
+    height: 40px;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  .personen-table {
+    width: 100%;
+  }
+  
+  .mat-column-aktionen {
+    width: 150px;
+    text-align: center;
+  }
+  
+  .mat-column-status,
+  .mat-column-zug {
+    width: 100px;
+  }
+  
+  .action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+  }
+  
+  .kontakt-info {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.9em;
+  }
+  
+  .email {
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+  
+  .status-badge {
+    padding: 4px 8px;
+    border-radius: 16px;
+    font-size: 0.8em;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  
+  .status-aktiv {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+  }
+  
+  .status-inaktiv {
+    background-color: #ffebee;
+    color: #c62828;
+  }
+  
+  .status-neu {
+    background-color: #e3f2fd;
+    color: #1565c0;
+  }
+  
+  .empty-row {
+    padding: 16px;
+    text-align: center;
+  }
+  
+  .no-data-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #888;
+  }
+  
+  .person-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .header-section {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .search-field {
+      width: 100%;
+    }
+    
+    .action-section {
+      width: 100%;
+    }
+  }

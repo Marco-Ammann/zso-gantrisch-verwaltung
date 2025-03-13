@@ -1,0 +1,330 @@
+<!-- src/app/modules/personen/person-detail/person-detail.component.html -->
+<div class="person-detail-container">
+    <!-- Zurück-Button -->
+    <div class="back-button-container">
+      <button mat-button color="primary" (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+        Zurück zur Übersicht
+      </button>
+    </div>
+    
+    @if (isLoading) {
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Personendaten werden geladen...</p>
+      </div>
+    } @else if (!person) {
+      <mat-card>
+        <mat-card-content>
+          <div class="error-message">
+            <mat-icon>error</mat-icon>
+            <p>Person nicht gefunden oder Fehler beim Laden der Daten.</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    } @else {
+      <!-- Header-Karte mit wichtigsten Infos -->
+      <mat-card class="header-card">
+        <mat-card-content>
+          <div class="header-content">
+            <div class="person-info">
+              <h1 class="person-name">
+                {{ person.grunddaten.grad }} {{ person.grunddaten.vorname }} {{ person.grunddaten.nachname }}
+              </h1>
+              <div class="person-function">{{ person.grunddaten.funktion }}</div>
+              <div class="person-details">
+                <span class="status-badge" [ngClass]="'status-' + person.zivilschutz.status">
+                  {{ formatStatus(person.zivilschutz.status) }}
+                </span>
+                <span class="detail-item">
+                  <mat-icon>group</mat-icon> Zug {{ person.zivilschutz.einteilung.zug }}
+                  @if (person.zivilschutz.einteilung.gruppe) {
+                    , Gruppe {{ person.zivilschutz.einteilung.gruppe }}
+                  }
+                </span>
+                <span class="detail-item">
+                  <mat-icon>cake</mat-icon> {{ formatDate(person.grunddaten.geburtsdatum) }}
+                </span>
+              </div>
+            </div>
+            
+            <div class="action-buttons">
+              <button mat-raised-button color="primary" (click)="generatePdf()">
+                <mat-icon>picture_as_pdf</mat-icon>
+                Kontaktdatenblatt
+              </button>
+              
+              @if (canEdit()) {
+                <button mat-raised-button color="accent" (click)="editPerson()">
+                  <mat-icon>edit</mat-icon>
+                  Bearbeiten
+                </button>
+              }
+              
+              @if (canDelete()) {
+                <button mat-raised-button color="warn" (click)="deletePerson()">
+                  <mat-icon>delete</mat-icon>
+                  Löschen
+                </button>
+              }
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+      
+      <!-- Tabs mit detaillierten Informationen -->
+      <mat-card class="detail-card">
+        <mat-card-content>
+          <mat-tab-group>
+            <!-- Tab: Kontaktdaten -->
+            <mat-tab label="Kontaktdaten">
+              <div class="tab-content">
+                <div class="info-section">
+                  <h2 class="section-title">
+                    <mat-icon>contact_mail</mat-icon>
+                    Kontaktdaten
+                  </h2>
+                  
+                  <div class="info-grid">
+                    <div class="info-group">
+                      <div class="info-label">Adresse</div>
+                      <div class="info-value">
+                        {{ person.kontaktdaten.strasse }}<br>
+                        {{ person.kontaktdaten.plz }} {{ person.kontaktdaten.ort }}
+                      </div>
+                    </div>
+                    
+                    <div class="info-group">
+                      <div class="info-label">E-Mail</div>
+                      <div class="info-value">{{ person.kontaktdaten.email }}</div>
+                    </div>
+                    
+                    <div class="info-group">
+                      <div class="info-label">Telefon Mobil</div>
+                      <div class="info-value">{{ person.kontaktdaten.telefonMobil }}</div>
+                    </div>
+                    
+                    @if (person.kontaktdaten.telefonFestnetz) {
+                      <div class="info-group">
+                        <div class="info-label">Telefon Festnetz</div>
+                        <div class="info-value">{{ person.kontaktdaten.telefonFestnetz }}</div>
+                      </div>
+                    }
+                    
+                    @if (person.kontaktdaten.telefonGeschaeftlich) {
+                      <div class="info-group">
+                        <div class="info-label">Telefon Geschäftlich</div>
+                        <div class="info-value">{{ person.kontaktdaten.telefonGeschaeftlich }}</div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            </mat-tab>
+            
+            <!-- Tab: Zivilschutz -->
+            <mat-tab label="Zivilschutz">
+              <div class="tab-content">
+                <div class="info-section">
+                  <h2 class="section-title">
+                    <mat-icon>shield</mat-icon>
+                    Zivilschutzinformationen
+                  </h2>
+                  
+                  <div class="info-grid">
+                    <div class="info-group">
+                      <div class="info-label">Grundausbildung</div>
+                      <div class="info-value">{{ person.zivilschutz.grundausbildung }}</div>
+                    </div>
+                    
+                    <div class="info-group">
+                      <div class="info-label">Einteilung</div>
+                      <div class="info-value">
+                        Zug {{ person.zivilschutz.einteilung.zug }}
+                        @if (person.zivilschutz.einteilung.gruppe) {
+                          , Gruppe {{ person.zivilschutz.einteilung.gruppe }}
+                        }
+                      </div>
+                    </div>
+                    
+                    <div class="info-group">
+                      <div class="info-label">Status</div>
+                      <div class="info-value">
+                        <span class="status-badge" [ngClass]="'status-' + person.zivilschutz.status">
+                          {{ formatStatus(person.zivilschutz.status) }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  @if (person.zivilschutz.zusatzausbildungen && person.zivilschutz.zusatzausbildungen.length > 0) {
+                    <h3 class="subsection-title">Zusatzausbildungen</h3>
+                    <div class="chip-list">
+                      @for (ausbildung of person.zivilschutz.zusatzausbildungen; track ausbildung) {
+                        <mat-chip>{{ ausbildung }}</mat-chip>
+                      }
+                    </div>
+                  } @else {
+                    <p class="no-data-message">Keine Zusatzausbildungen erfasst.</p>
+                  }
+                </div>
+              </div>
+            </mat-tab>
+            
+            <!-- Tab: Persönliches -->
+            <mat-tab label="Persönliches">
+              <div class="tab-content">
+                <div class="info-section">
+                  <h2 class="section-title">
+                    <mat-icon>person</mat-icon>
+                    Persönliche Informationen
+                  </h2>
+                  
+                  <div class="info-grid">
+                    @if (person.persoenliches.blutgruppe) {
+                      <div class="info-group">
+                        <div class="info-label">Blutgruppe</div>
+                        <div class="info-value">{{ person.persoenliches.blutgruppe }}</div>
+                      </div>
+                    }
+                  </div>
+                  
+                  @if (person.persoenliches.sprachkenntnisse && person.persoenliches.sprachkenntnisse.length > 0) {
+                    <h3 class="subsection-title">Sprachkenntnisse</h3>
+                    <div class="chip-list">
+                      @for (sprache of person.persoenliches.sprachkenntnisse; track sprache) {
+                        <mat-chip>{{ sprache }}</mat-chip>
+                      }
+                    </div>
+                  }
+                  
+                  @if (person.persoenliches.allergien && person.persoenliches.allergien.length > 0) {
+                    <h3 class="subsection-title">Allergien</h3>
+                    <div class="chip-list">
+                      @for (allergie of person.persoenliches.allergien; track allergie) {
+                        <mat-chip color="warn" selected>{{ allergie }}</mat-chip>
+                      }
+                    </div>
+                  }
+                  
+                  @if (person.persoenliches.essgewohnheiten && person.persoenliches.essgewohnheiten.length > 0) {
+                    <h3 class="subsection-title">Essgewohnheiten</h3>
+                    <div class="chip-list">
+                      @for (essgewohnheit of person.persoenliches.essgewohnheiten; track essgewohnheit) {
+                        <mat-chip>{{ essgewohnheit }}</mat-chip>
+                      }
+                    </div>
+                  }
+                  
+                  @if (person.persoenliches.besonderheiten && person.persoenliches.besonderheiten.length > 0) {
+                    <h3 class="subsection-title">Besonderheiten</h3>
+                    <div class="chip-list">
+                      @for (besonderheit of person.persoenliches.besonderheiten; track besonderheit) {
+                        <mat-chip>{{ besonderheit }}</mat-chip>
+                      }
+                    </div>
+                  }
+                  
+                  @if (!person.persoenliches.blutgruppe && 
+                       (!person.persoenliches.sprachkenntnisse || person.persoenliches.sprachkenntnisse.length === 0) &&
+                       (!person.persoenliches.allergien || person.persoenliches.allergien.length === 0) &&
+                       (!person.persoenliches.essgewohnheiten || person.persoenliches.essgewohnheiten.length === 0) &&
+                       (!person.persoenliches.besonderheiten || person.persoenliches.besonderheiten.length === 0)) {
+                    <p class="no-data-message">Keine persönlichen Informationen erfasst.</p>
+                  }
+                </div>
+              </div>
+            </mat-tab>
+            
+            <!-- Tab: Berufliches -->
+            <mat-tab label="Berufliches">
+              <div class="tab-content">
+                <div class="info-section">
+                  <h2 class="section-title">
+                    <mat-icon>work</mat-icon>
+                    Berufliche Informationen
+                  </h2>
+                  
+                  <div class="info-grid">
+                    @if (person.berufliches.ausgeubterBeruf) {
+                      <div class="info-group">
+                        <div class="info-label">Ausgeübter Beruf</div>
+                        <div class="info-value">{{ person.berufliches.ausgeubterBeruf }}</div>
+                      </div>
+                    }
+                    
+                    @if (person.berufliches.erlernterBeruf) {
+                      <div class="info-group">
+                        <div class="info-label">Erlernter Beruf</div>
+                        <div class="info-value">{{ person.berufliches.erlernterBeruf }}</div>
+                      </div>
+                    }
+                    
+                    @if (person.berufliches.arbeitgeber) {
+                      <div class="info-group">
+                        <div class="info-label">Arbeitgeber</div>
+                        <div class="info-value">{{ person.berufliches.arbeitgeber }}</div>
+                      </div>
+                    }
+                    
+                    @if (person.berufliches.zivileSpezialausbildung) {
+                      <div class="info-group">
+                        <div class="info-label">Zivile Spezialausbildung</div>
+                        <div class="info-value">{{ person.berufliches.zivileSpezialausbildung }}</div>
+                      </div>
+                    }
+                  </div>
+                  
+                  @if (person.berufliches.fuehrerausweisKategorie && person.berufliches.fuehrerausweisKategorie.length > 0) {
+                    <h3 class="subsection-title">Führerausweiskategorien</h3>
+                    <div class="chip-list">
+                      @for (kategorie of person.berufliches.fuehrerausweisKategorie; track kategorie) {
+                        <mat-chip>{{ kategorie }}</mat-chip>
+                      }
+                    </div>
+                  }
+                  
+                  @if (!person.berufliches.ausgeubterBeruf && 
+                       !person.berufliches.erlernterBeruf &&
+                       !person.berufliches.arbeitgeber &&
+                       !person.berufliches.zivileSpezialausbildung &&
+                       (!person.berufliches.fuehrerausweisKategorie || person.berufliches.fuehrerausweisKategorie.length === 0)) {
+                    <p class="no-data-message">Keine beruflichen Informationen erfasst.</p>
+                  }
+                </div>
+              </div>
+            </mat-tab>
+            
+            <!-- Tab: Metadaten -->
+            <mat-tab label="Metadaten">
+              <div class="tab-content">
+                <div class="info-section">
+                  <h2 class="section-title">
+                    <mat-icon>info</mat-icon>
+                    System-Informationen
+                  </h2>
+                  
+                  <div class="info-grid">
+                    <div class="info-group">
+                      <div class="info-label">Letzte Aktualisierung</div>
+                      <div class="info-value">{{ formatDate(person.metadaten.letzteAktualisierung) }}</div>
+                    </div>
+                    
+                    <div class="info-group">
+                      <div class="info-label">Aktualisiert von</div>
+                      <div class="info-value">{{ person.metadaten.aktualisiert_von || 'Unbekannt' }}</div>
+                    </div>
+                    
+                    <div class="info-group">
+                      <div class="info-label">Person-ID</div>
+                      <div class="info-value">{{ person.id }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </mat-tab>
+          </mat-tab-group>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>

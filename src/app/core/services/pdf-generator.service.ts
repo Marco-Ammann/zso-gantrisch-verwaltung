@@ -152,8 +152,8 @@ export class PdfGeneratorService {
         yPos += 7;
       }
       
-      if (person.berufliches.führerausweisKategorie && person.berufliches.führerausweisKategorie.length > 0) {
-        doc.text(`Führerausweis-Kategorien: ${person.berufliches.führerausweisKategorie.join(', ')}`, margin, yPos);
+      if (person.berufliches.fuehrerausweisKategorie && person.berufliches.fuehrerausweisKategorie.length > 0) {
+        doc.text(`Führerausweis-Kategorien: ${person.berufliches.fuehrerausweisKategorie.join(', ')}`, margin, yPos);
         yPos += 7;
       }
     }
@@ -346,7 +346,7 @@ export class PdfGeneratorService {
     return !!(b.ausgeubterBeruf || 
       b.erlernterBeruf || 
       b.arbeitgeber ||
-      (b.führerausweisKategorie && b.führerausweisKategorie.length > 0) ||
+      (b.fuehrerausweisKategorie && b.fuehrerausweisKategorie.length > 0) ||
       b.zivileSpezialausbildung);
   }
 }

@@ -40,7 +40,7 @@ export interface Person {
       ausgeubterBeruf?: string;
       erlernterBeruf?: string;
       arbeitgeber?: string;
-      führerausweisKategorie?: string[];
+      fuehrerausweisKategorie?: string[];
       zivileSpezialausbildung?: string;
     };
     

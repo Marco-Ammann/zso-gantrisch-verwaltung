@@ -97,9 +97,11 @@ export class PersonService {
       };
       
       const id = await this.firebaseService.add(this.collectionName, person);
+      console.log('Person erfolgreich erstellt mit ID:', id);
       
-      // Aktualisiere den lokalen Zustand
-      await this.loadPersonen();
+      // Sofortige Aktualisierung des lokalen Zustands
+      const newPerson: Person = { ...person, id };
+      this._personen.update(personen => [...personen, newPerson]);
       
       return id;
     } catch (error) {

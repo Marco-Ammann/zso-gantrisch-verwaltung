@@ -1,0 +1,73 @@
+<!-- src/app/modules/personen/notfallkontakte/kontakt-dialog/kontakt-dialog.component.html -->
+<h2 mat-dialog-title>{{ dialogTitle }}</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="kontaktForm">
+    <!-- Person-Auswahl (wenn nicht im Kontext einer bestimmten Person) -->
+    @if (!data.person) {
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Person</mat-label>
+        <mat-select formControlName="personId">
+          @for (person of data.personOptions; track person.id) {
+            <mat-option [value]="person.id">
+              {{ person.grunddaten.grad }} {{ person.grunddaten.nachname }} {{ person.grunddaten.vorname }}
+            </mat-option>
+          }
+        </mat-select>
+        @if (hasError('personId', 'required')) {
+          <mat-error>Person ist erforderlich</mat-error>
+        }
+      </mat-form-field>
+    }
+    
+    <!-- Name des Notfallkontakts -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Name</mat-label>
+      <input matInput formControlName="name" placeholder="Vollständiger Name">
+      @if (hasError('name', 'required')) {
+        <mat-error>Name ist erforderlich</mat-error>
+      }
+    </mat-form-field>
+    
+    <!-- Beziehung -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Beziehung</mat-label>
+      <input matInput formControlName="beziehung" placeholder="z.B. Ehepartner, Eltern, Freund">
+      @if (hasError('beziehung', 'required')) {
+        <mat-error>Beziehung ist erforderlich</mat-error>
+      }
+    </mat-form-field>
+    
+    <!-- Telefonnummer -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Telefonnummer</mat-label>
+      <input matInput formControlName="telefonnummer">
+      @if (hasError('telefonnummer', 'required')) {
+        <mat-error>Telefonnummer ist erforderlich</mat-error>
+      }
+    </mat-form-field>
+    
+    <!-- Priorität -->
+    <div class="radio-group">
+      <label class="radio-label">Priorität:</label>
+      <mat-radio-group formControlName="prioritaet" class="radio-options">
+        <mat-radio-button [value]="1">Priorität 1 (Erster Kontakt)</mat-radio-button>
+        <mat-radio-button [value]="2">Priorität 2 (Alternativer Kontakt)</mat-radio-button>
+      </mat-radio-group>
+      @if (hasError('prioritaet', 'required')) {
+        <mat-error>Priorität ist erforderlich</mat-error>
+      }
+    </div>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Abbrechen</button>
+  <button 
+    mat-raised-button 
+    color="primary" 
+    [disabled]="kontaktForm.invalid"
+    (click)="save()">
+    {{ isEditMode ? 'Aktualisieren' : 'Erstellen' }}
+  </button>
+</mat-dialog-actions>

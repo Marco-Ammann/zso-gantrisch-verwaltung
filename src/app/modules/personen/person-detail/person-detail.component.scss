@@ -1,0 +1,190 @@
+// src/app/modules/personen/person-detail/person-detail.component.scss
+.person-detail-container {
+    padding: 16px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .back-button-container {
+    margin-bottom: 16px;
+  }
+  
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    
+    p {
+      margin-top: 16px;
+      color: #666;
+    }
+  }
+  
+  .error-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f44336;
+    padding: 20px;
+    
+    mat-icon {
+      margin-right: 8px;
+    }
+  }
+  
+  .header-card {
+    margin-bottom: 16px;
+  }
+  
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .person-info {
+    flex: 1;
+    min-width: 300px;
+  }
+  
+  .person-name {
+    margin: 0 0 4px 0;
+    font-size: 24px;
+    font-weight: 500;
+  }
+  
+  .person-function {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 12px;
+  }
+  
+  .person-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+  }
+  
+  .detail-item {
+    display: flex;
+    align-items: center;
+    color: #666;
+    
+    mat-icon {
+      font-size: 16px;
+      height: 16px;
+      width: 16px;
+      margin-right: 4px;
+    }
+  }
+  
+  .status-badge {
+    padding: 4px 8px;
+    border-radius: 16px;
+    font-size: 0.8em;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  
+  .status-aktiv {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+  }
+  
+  .status-inaktiv {
+    background-color: #ffebee;
+    color: #c62828;
+  }
+  
+  .status-neu {
+    background-color: #e3f2fd;
+    color: #1565c0;
+  }
+  
+  .action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .tab-content {
+    padding: 24px 0;
+  }
+  
+  .info-section {
+    margin-bottom: 24px;
+  }
+  
+  .section-title {
+    display: flex;
+    align-items: center;
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0 0 16px 0;
+    color: #333;
+    border-bottom: 2px solid #FF7F00;
+    padding-bottom: 8px;
+    
+    mat-icon {
+      margin-right: 8px;
+      color: #FF7F00;
+    }
+  }
+  
+  .subsection-title {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 24px 0 12px 0;
+    color: #555;
+  }
+  
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+  
+  .info-group {
+    margin-bottom: 16px;
+  }
+  
+  .info-label {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 4px;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  
+  .info-value {
+    font-size: 16px;
+    color: #333;
+  }
+  
+  .chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .no-data-message {
+    color: #999;
+    font-style: italic;
+    margin: 16px 0;
+  }
+  
+  @media (max-width: 768px) {
+    .header-content {
+      flex-direction: column;
+    }
+    
+    .action-buttons {
+      width: 100%;
+      justify-content: flex-start;
+    }
+  }

@@ -1,0 +1,624 @@
+<!-- src/app/modules/personen/person-form/person-form.component.html -->
+<div class="person-form-container">
+  <div class="form-header">
+    <h1 class="page-title">
+      {{ isEditMode ? "Person bearbeiten" : "Neue Person erstellen" }}
+    </h1>
+    <div class="action-buttons">
+      <button mat-button color="primary" (click)="cancel()">Abbrechen</button>
+
+      <button
+        mat-raised-button
+        color="primary"
+        [disabled]="personForm.invalid || isSaving"
+        (click)="savePerson()"
+      >
+        <mat-icon>save</mat-icon>
+        {{ isSaving ? "Wird gespeichert..." : "Speichern" }}
+      </button>
+    </div>
+  </div>
+
+  @if (isLoading) {
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Daten werden geladen...</p>
+  </div>
+  } @else {
+  <form [formGroup]="personForm">
+    <mat-stepper linear #stepper>
+      <!-- Schritt 1: Grunddaten -->
+      <mat-step [stepControl]="personForm.get('grunddaten')!">
+        <ng-template matStepLabel>Grunddaten</ng-template>
+
+        <div formGroupName="grunddaten" class="step-content">
+          <h2 class="step-title">Grunddaten</h2>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Grad</mat-label>
+              <mat-select formControlName="grad">
+                @for (grad of gradOptions; track grad) {
+                <mat-option [value]="grad">{{ grad }}</mat-option>
+                }
+              </mat-select>
+              @if (hasError('grunddaten.grad', 'required')) {
+              <mat-error>Grad ist erforderlich</mat-error>
+              }
+            </mat-form-field>
+          </div>
+
+          <div class="form-row two-cols">
+            <mat-form-field appearance="outline">
+                <mat-label>Nachname</mat-label>
+                <input matInput formControlName="nachname" placeholder="Nachname eingeben">
+                @if (hasError('grunddaten.nachname', 'required')) {
+                  <mat-error>Nachname ist erforderlich</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Vorname</mat-label>
+                <input matInput formControlName="vorname" placeholder="Vorname eingeben">
+                @if (hasError('grunddaten.vorname', 'required')) {
+                  <mat-error>Vorname ist erforderlich</mat-error>
+                }
+              </mat-form-field>
+          </div>
+
+          <div class="form-row two-cols">
+            <mat-form-field appearance="outline">
+              <mat-label>Funktion</mat-label>
+              <input matInput formControlName="funktion" />
+              @if (hasError('grunddaten.funktion', 'required')) {
+              <mat-error>Funktion ist erforderlich</mat-error>
+              }
+            </mat-form-field>
+
+            <!-- Geburtsdatum -->
+            <mat-form-field appearance="outline">
+              <mat-label>Geburtsdatum</mat-label>
+              <input
+                matInput
+                [matDatepicker]="picker"
+                formControlName="geburtsdatum"
+                placeholder="DD/MM/YYYY"
+              />
+              <mat-datepicker-toggle
+                matIconSuffix
+                [for]="picker"
+              ></mat-datepicker-toggle>
+              <mat-datepicker #picker startView="multi-year"></mat-datepicker>
+              <mat-hint>Format: DD/MM/YYYY</mat-hint>
+              @if (hasError('grunddaten.geburtsdatum', 'required')) {
+              <mat-error>Geburtsdatum ist erforderlich</mat-error>
+              } @else if (hasError('grunddaten.geburtsdatum',
+              'matDatepickerParse')) {
+              <mat-error
+                >Ungültiges Datumsformat. Bitte DD/MM/YYYY verwenden</mat-error
+              >
+              }
+            </mat-form-field>
+          </div>
+
+          <div class="step-actions">
+            <button mat-button matStepperNext>Weiter</button>
+          </div>
+        </div>
+      </mat-step>
+
+      <!-- Schritt 2: Kontaktdaten -->
+      <mat-step [stepControl]="personForm.get('kontaktdaten')!">
+        <ng-template matStepLabel>Kontaktdaten</ng-template>
+
+        <div formGroupName="kontaktdaten" class="step-content">
+          <h2 class="step-title">Kontaktdaten</h2>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Straße und Hausnummer</mat-label>
+              <input matInput formControlName="strasse" />
+              @if (hasError('kontaktdaten.strasse', 'required')) {
+              <mat-error>Straße ist erforderlich</mat-error>
+              }
+            </mat-form-field>
+          </div>
+
+          <div class="form-row two-cols">
+            <mat-form-field appearance="outline">
+                <mat-label>PLZ</mat-label>
+                <input matInput formControlName="plz" placeholder="1234">
+                @if (hasError('kontaktdaten.plz', 'required')) {
+                  <mat-error>PLZ ist erforderlich</mat-error>
+                } @else if (hasError('kontaktdaten.plz', 'pattern')) {
+                  <mat-error>Bitte eine gültige PLZ eingeben (4 Ziffern)</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Ort</mat-label>
+                <input matInput formControlName="ort" placeholder="Ortschaft eingeben">
+                @if (hasError('kontaktdaten.ort', 'required')) {
+                  <mat-error>Ort ist erforderlich</mat-error>
+                }
+              </mat-form-field>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline">
+                <mat-label>E-Mail</mat-label>
+                <input matInput type="email" formControlName="email" placeholder="beispiel@domain.ch">
+                @if (hasError('kontaktdaten.email', 'required')) {
+                  <mat-error>E-Mail ist erforderlich</mat-error>
+                } @else if (hasError('kontaktdaten.email', 'email')) {
+                  <mat-error>Bitte eine gültige E-Mail-Adresse eingeben</mat-error>
+                }
+              </mat-form-field>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Telefon Mobil</mat-label>
+              <input matInput formControlName="telefonMobil" />
+              @if (hasError('kontaktdaten.telefonMobil', 'required')) {
+              <mat-error>Mobiltelefon ist erforderlich</mat-error>
+              }
+            </mat-form-field>
+          </div>
+
+          <div class="form-row two-cols">
+            <mat-form-field appearance="outline">
+              <mat-label>Telefon Festnetz (optional)</mat-label>
+              <input matInput formControlName="telefonFestnetz" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Telefon Geschäftlich (optional)</mat-label>
+              <input matInput formControlName="telefonGeschaeftlich" />
+            </mat-form-field>
+          </div>
+
+          <div class="step-actions">
+            <button mat-button matStepperPrevious>Zurück</button>
+            <button mat-button matStepperNext>Weiter</button>
+          </div>
+        </div>
+      </mat-step>
+
+      <!-- Schritt 3: Zivilschutz -->
+      <mat-step [stepControl]="personForm.get('zivilschutz')!">
+        <ng-template matStepLabel>Zivilschutz</ng-template>
+
+        <div formGroupName="zivilschutz" class="step-content">
+          <h2 class="step-title">Zivilschutz</h2>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Grundausbildung (Jahr)</mat-label>
+              <input matInput formControlName="grundausbildung" />
+              @if (hasError('zivilschutz.grundausbildung', 'required')) {
+              <mat-error>Grundausbildung ist erforderlich</mat-error>
+              }
+            </mat-form-field>
+          </div>
+
+          <div formGroupName="einteilung" class="form-row two-cols">
+            <mat-form-field appearance="outline">
+              <mat-label>Zug</mat-label>
+              <input matInput type="number" formControlName="zug" />
+              @if (hasError('zivilschutz.einteilung.zug', 'required')) {
+              <mat-error>Zug ist erforderlich</mat-error>
+              } @else if (hasError('zivilschutz.einteilung.zug', 'min')) {
+              <mat-error>Zug muss mindestens 1 sein</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Gruppe (optional)</mat-label>
+              <input matInput formControlName="gruppe" />
+            </mat-form-field>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Status</mat-label>
+              <mat-select formControlName="status">
+                @for (option of statusOptions; track option.value) {
+                <mat-option [value]="option.value">{{
+                  option.label
+                }}</mat-option>
+                }
+              </mat-select>
+              @if (hasError('zivilschutz.status', 'required')) {
+              <mat-error>Status ist erforderlich</mat-error>
+              }
+            </mat-form-field>
+          </div>
+
+          <!-- Zusatzausbildungen als FormArray -->
+          <div class="form-row">
+            <div class="form-array-container">
+              <div class="form-array-header">
+                <h3>Zusatzausbildungen</h3>
+                <button
+                  mat-mini-fab
+                  color="primary"
+                  type="button"
+                  (click)="addArrayItem('zivilschutz.zusatzausbildungen')"
+                  matTooltip="Zusatzausbildung hinzufügen"
+                >
+                  <mat-icon>add</mat-icon>
+                </button>
+              </div>
+
+              <div class="form-array-items" formArrayName="zusatzausbildungen">
+                @for (item of
+                getFormArray('zivilschutz.zusatzausbildungen').controls; track
+                index; let index = $index) {
+                <div class="form-array-item">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Zusatzausbildung {{ index + 1 }}</mat-label>
+                    <input matInput [formControlName]="index" />
+                  </mat-form-field>
+
+                  <button
+                    mat-icon-button
+                    color="warn"
+                    type="button"
+                    (click)="
+                      removeArrayItem('zivilschutz.zusatzausbildungen', index)
+                    "
+                    matTooltip="Entfernen"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+                } @empty {
+                <p class="no-items-message">
+                  Keine Zusatzausbildungen erfasst.
+                </p>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="step-actions">
+            <button mat-button matStepperPrevious>Zurück</button>
+            <button mat-button matStepperNext>Weiter</button>
+          </div>
+        </div>
+      </mat-step>
+
+      <!-- Schritt 4: Persönliches und Berufliches -->
+      <mat-step>
+        <ng-template matStepLabel>Weitere Angaben</ng-template>
+
+        <div class="step-content">
+          <!-- Persönliches -->
+          <div formGroupName="persoenliches">
+            <h2 class="step-title">Persönliche Angaben</h2>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Blutgruppe (optional)</mat-label>
+                <mat-select formControlName="blutgruppe">
+                  <mat-option value="">Keine Angabe</mat-option>
+                  @for (option of blutgruppenOptions; track option) {
+                  <mat-option [value]="option">{{ option }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <!-- Sprachkenntnisse als FormArray -->
+            <div class="form-row">
+              <div class="form-array-container">
+                <div class="form-array-header">
+                  <h3>Sprachkenntnisse</h3>
+                  <button
+                    mat-mini-fab
+                    color="primary"
+                    type="button"
+                    (click)="addArrayItem('persoenliches.sprachkenntnisse')"
+                    matTooltip="Sprache hinzufügen"
+                  >
+                    <mat-icon>add</mat-icon>
+                  </button>
+                </div>
+
+                <div class="form-array-items" formArrayName="sprachkenntnisse">
+                  @for (item of
+                  getFormArray('persoenliches.sprachkenntnisse').controls; track
+                  index; let index = $index) {
+                  <div class="form-array-item">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Sprache {{ index + 1 }}</mat-label>
+                      <input matInput [formControlName]="index" />
+                    </mat-form-field>
+
+                    <button
+                      mat-icon-button
+                      color="warn"
+                      type="button"
+                      (click)="
+                        removeArrayItem('persoenliches.sprachkenntnisse', index)
+                      "
+                      matTooltip="Entfernen"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                  } @empty {
+                  <p class="no-items-message">
+                    Keine Sprachkenntnisse erfasst.
+                  </p>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Allergien als FormArray -->
+            <div class="form-row">
+              <div class="form-array-container">
+                <div class="form-array-header">
+                  <h3>Allergien</h3>
+                  <button
+                    mat-mini-fab
+                    color="primary"
+                    type="button"
+                    (click)="addArrayItem('persoenliches.allergien')"
+                    matTooltip="Allergie hinzufügen"
+                  >
+                    <mat-icon>add</mat-icon>
+                  </button>
+                </div>
+
+                <div class="form-array-items" formArrayName="allergien">
+                  @for (item of
+                  getFormArray('persoenliches.allergien').controls; track index;
+                  let index = $index) {
+                  <div class="form-array-item">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Allergie {{ index + 1 }}</mat-label>
+                      <input matInput [formControlName]="index" />
+                    </mat-form-field>
+
+                    <button
+                      mat-icon-button
+                      color="warn"
+                      type="button"
+                      (click)="
+                        removeArrayItem('persoenliches.allergien', index)
+                      "
+                      matTooltip="Entfernen"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                  } @empty {
+                  <p class="no-items-message">Keine Allergien erfasst.</p>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Essgewohnheiten als FormArray -->
+            <div class="form-row">
+              <div class="form-array-container">
+                <div class="form-array-header">
+                  <h3>Essgewohnheiten</h3>
+                  <button
+                    mat-mini-fab
+                    color="primary"
+                    type="button"
+                    (click)="addArrayItem('persoenliches.essgewohnheiten')"
+                    matTooltip="Essgewohnheit hinzufügen"
+                  >
+                    <mat-icon>add</mat-icon>
+                  </button>
+                </div>
+
+                <div class="form-array-items" formArrayName="essgewohnheiten">
+                  @for (item of
+                  getFormArray('persoenliches.essgewohnheiten').controls; track
+                  index; let index = $index) {
+                  <div class="form-array-item">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Essgewohnheit {{ index + 1 }}</mat-label>
+                      <input matInput [formControlName]="index" />
+                    </mat-form-field>
+
+                    <button
+                      mat-icon-button
+                      color="warn"
+                      type="button"
+                      (click)="
+                        removeArrayItem('persoenliches.essgewohnheiten', index)
+                      "
+                      matTooltip="Entfernen"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                  } @empty {
+                  <p class="no-items-message">Keine Essgewohnheiten erfasst.</p>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Besonderheiten als FormArray -->
+            <div class="form-row">
+              <div class="form-array-container">
+                <div class="form-array-header">
+                  <h3>Besonderheiten</h3>
+                  <button
+                    mat-mini-fab
+                    color="primary"
+                    type="button"
+                    (click)="addArrayItem('persoenliches.besonderheiten')"
+                    matTooltip="Besonderheit hinzufügen"
+                  >
+                    <mat-icon>add</mat-icon>
+                  </button>
+                </div>
+
+                <div class="form-array-items" formArrayName="besonderheiten">
+                  @for (item of
+                  getFormArray('persoenliches.besonderheiten').controls; track
+                  index; let index = $index) {
+                  <div class="form-array-item">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Besonderheit {{ index + 1 }}</mat-label>
+                      <input matInput [formControlName]="index" />
+                    </mat-form-field>
+
+                    <button
+                      mat-icon-button
+                      color="warn"
+                      type="button"
+                      (click)="
+                        removeArrayItem('persoenliches.besonderheiten', index)
+                      "
+                      matTooltip="Entfernen"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                  } @empty {
+                  <p class="no-items-message">Keine Besonderheiten erfasst.</p>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <mat-divider class="section-divider"></mat-divider>
+
+          <!-- Berufliches -->
+          <div formGroupName="berufliches">
+            <h2 class="step-title">Berufliche Angaben</h2>
+
+            <div class="form-row two-cols">
+              <mat-form-field appearance="outline">
+                <mat-label>Ausgeübter Beruf (optional)</mat-label>
+                <input matInput formControlName="ausgeubterBeruf" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Erlernter Beruf (optional)</mat-label>
+                <input matInput formControlName="erlernterBeruf" />
+              </mat-form-field>
+            </div>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Arbeitgeber (optional)</mat-label>
+                <input matInput formControlName="arbeitgeber" />
+              </mat-form-field>
+            </div>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Zivile Spezialausbildung (optional)</mat-label>
+                <input matInput formControlName="zivileSpezialausbildung" />
+              </mat-form-field>
+            </div>
+
+            <!-- Führerausweiskategorien als FormArray -->
+            <div class="form-row">
+              <div class="form-array-container">
+                <div class="form-array-header">
+                  <h3>Führerausweiskategorien</h3>
+                  <button
+                    mat-mini-fab
+                    color="primary"
+                    type="button"
+                    (click)="addArrayItem('berufliches.führerausweisKategorie')"
+                    matTooltip="Kategorie hinzufügen"
+                  >
+                    <mat-icon>add</mat-icon>
+                  </button>
+                </div>
+
+                <div
+                  class="form-array-items"
+                  formArrayName="führerausweisKategorie"
+                >
+                  @for (item of
+                  getFormArray('berufliches.führerausweisKategorie').controls;
+                  track index; let index = $index) {
+                  <div class="form-array-item">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Kategorie {{ index + 1 }}</mat-label>
+                      <input matInput [formControlName]="index" />
+                    </mat-form-field>
+
+                    <button
+                      mat-icon-button
+                      color="warn"
+                      type="button"
+                      (click)="
+                        removeArrayItem(
+                          'berufliches.führerausweisKategorie',
+                          index
+                        )
+                      "
+                      matTooltip="Entfernen"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                  } @empty {
+                  <p class="no-items-message">
+                    Keine Führerausweiskategorien erfasst.
+                  </p>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="step-actions">
+            <button mat-button matStepperPrevious>Zurück</button>
+            <button mat-button matStepperNext>Weiter</button>
+          </div>
+        </div>
+      </mat-step>
+
+      <!-- Schritt 5: Abschluss -->
+      <mat-step>
+        <ng-template matStepLabel>Überprüfen & Speichern</ng-template>
+
+        <div class="step-content">
+          <h2 class="step-title">Daten überprüfen und speichern</h2>
+
+          <p class="review-text">
+            Bitte überprüfen Sie die eingegebenen Daten und klicken Sie auf
+            "Speichern", um die Person zu
+            {{ isEditMode ? "aktualisieren" : "erstellen" }}.
+          </p>
+
+          <div class="action-panel">
+            <button
+              mat-raised-button
+              color="primary"
+              [disabled]="personForm.invalid || isSaving"
+              (click)="savePerson()"
+            >
+              <mat-icon>save</mat-icon>
+              {{ isSaving ? "Wird gespeichert..." : "Speichern" }}
+            </button>
+
+            <button mat-button (click)="cancel()">Abbrechen</button>
+          </div>
+
+          <div class="step-actions">
+            <button mat-button matStepperPrevious>Zurück</button>
+          </div>
+        </div>
+      </mat-step>
+    </mat-stepper>
+  </form>
+  }
+</div>

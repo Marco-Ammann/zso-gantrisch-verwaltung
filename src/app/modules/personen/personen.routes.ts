@@ -1,10 +1,43 @@
+// src/app/modules/personen/personen.routes.ts
 import { Routes } from '@angular/router';
+import { authGuard } from '../../auth/guards/auth.guard';
 
-// Temporäre leere Route bis zur Implementierung der Komponenten
 export const PERSONEN_ROUTES: Routes = [
   {
     path: '',
-    loadComponent: () => import('../dashboard/dashboard.component').then(m => m.DashboardComponent),
-    title: 'Personen - ZSO Gantrisch'
+    loadComponent: () => import('./personen-liste/personen-liste.component')
+      .then(m => m.PersonenListeComponent),
+    title: 'Personen - ZSO Gantrisch',
+    canActivate: [authGuard]
+  },
+  {
+    path: 'neu',
+    loadComponent: () => import('./person-form/person-form.component')
+      .then(m => m.PersonFormComponent),
+    title: 'Neue Person - ZSO Gantrisch',
+    canActivate: [authGuard],
+    data: { roles: ['admin', 'oberleutnant', 'leutnant'] }
+  },
+  {
+    path: ':id',
+    loadComponent: () => import('./person-detail/person-detail.component')
+      .then(m => m.PersonDetailComponent),
+    title: 'Person Details - ZSO Gantrisch',
+    canActivate: [authGuard]
+  },
+  {
+    path: ':id/bearbeiten',
+    loadComponent: () => import('./person-form/person-form.component')
+      .then(m => m.PersonFormComponent),
+    title: 'Person bearbeiten - ZSO Gantrisch',
+    canActivate: [authGuard],
+    data: { roles: ['admin', 'oberleutnant', 'leutnant'] }
+  },
+  {
+    path: 'notfallkontakte',
+    loadComponent: () => import('./notfallkontakte/notfallkontakte.component')
+      .then(m => m.NotfallkontakteComponent),
+    title: 'Notfallkontakte - ZSO Gantrisch',
+    canActivate: [authGuard]
   }
 ];
