@@ -21,18 +21,13 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { 
-  DateAdapter, 
-  MAT_DATE_FORMATS, 
-  MAT_DATE_LOCALE 
-} from '@angular/material/core';
 
 import { AusbildungService } from '../../../core/services/ausbildung.service';
 import { Ausbildung } from '../../../core/models/ausbildung.model';
-import { 
-  CustomDateAdapter, 
-  CUSTOM_DATE_FORMATS 
-} from '../../../core/utils/custom-date-adapter';
+import { CustomDateAdapter, CUSTOM_DATE_FORMATS } from '../../../core/utils/custom-date-adapter';
+import { DateAdapter, MAT_DATE_FORMATS, MAT_DATE_LOCALE } from '@angular/material/core';
+
+
 
 @Component({
   selector: 'app-ausbildung-form',
@@ -50,15 +45,13 @@ import {
     MatDatepickerModule,
     MatNativeDateModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatDatepickerModule,
+
   ],
   providers: [
     { provide: MAT_DATE_LOCALE, useValue: 'de-CH' },
-    { 
-      provide: DateAdapter, 
-      useClass: CustomDateAdapter, 
-      deps: [MAT_DATE_LOCALE] 
-    },
+    { provide: DateAdapter, useClass: CustomDateAdapter, deps: [MAT_DATE_LOCALE] },
     { provide: MAT_DATE_FORMATS, useValue: CUSTOM_DATE_FORMATS }
   ],
   templateUrl: './ausbildung-form.component.html',
@@ -112,34 +105,14 @@ export class AusbildungFormComponent implements OnInit {
    * Erstellt die Formularstruktur
    */
   private createAusbildungForm(): FormGroup {
-    const currentYear = new Date().getFullYear();
     return this.fb.group({
       titel: ['', [Validators.required]],
       beschreibung: [''],
       typ: ['WK', [Validators.required]],
-      
-      // Erweitertes Datumshandling
-      startDatum: [null, [Validators.required]],
-      endDatum: [null],
-      
-      // Optionale Einrückzeiten für Kader und Soldaten
-      einrueckZeitKader: this.fb.group({
-        start: [null],
-        ende: [null]
-      }),
-      einrueckZeitSoldaten: this.fb.group({
-        start: [null],
-        ende: [null]
-      }),
-      
-      // Bestehende Felder
-      jahr: [currentYear, [
-        Validators.required, 
-        Validators.min(2000), 
-        Validators.max(2100)
-      ]],
+      jahr: [new Date().getFullYear(), [Validators.required, Validators.min(2000), Validators.max(2100)]],
+      datum: [new Date(), [Validators.required]],
       erforderlich: [true, [Validators.required]]
-    }, { validators: this.datumValidator });
+    });
   }
 
   /**

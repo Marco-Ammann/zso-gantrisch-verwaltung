@@ -84,6 +84,17 @@
                   <mat-error>Jahr darf höchstens 2100 sein</mat-error>
                 }
               </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Datum</mat-label>
+                <input matInput [matDatepicker]="picker" formControlName="datum" placeholder="DD/MM/YYYY">
+                <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+                <mat-datepicker #picker></mat-datepicker>
+                <mat-hint>Format: DD/MM/YYYY</mat-hint>
+                @if (hasError('datum', 'required')) {
+                  <mat-error>Datum ist erforderlich</mat-error>
+                }
+              </mat-form-field>
             </div>
   
             <div class="form-row checkbox-row">

@@ -7,9 +7,15 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
 import { NotfallkontaktService } from '../../../core/services/notfallkontakt.service';
 import { PersonService } from '../../../core/services/person.service';
@@ -20,7 +26,6 @@ import { Person } from '../../../core/models/person.model';
 
 import { KontaktDialogComponent } from './kontakt-dialog/kontakt-dialog.component';
 import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog/confirm-dialog.component';
-import { MatPaginatorModule } from '@angular/material/paginator';
 
 @Component({
   selector: 'app-notfallkontakte',
@@ -28,15 +33,20 @@ import { MatPaginatorModule } from '@angular/material/paginator';
   imports: [
     CommonModule,
     RouterModule,
+    ReactiveFormsModule,
     MatTableModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    MatChipsModule,
+    MatPaginatorModule,
+    MatSortModule,
     MatDialogModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
-    MatPaginatorModule
+    MatInputModule,
+    MatFormFieldModule
   ],
   templateUrl: './notfallkontakte.component.html',
   styleUrls: ['./notfallkontakte.component.scss']
@@ -53,6 +63,9 @@ export class NotfallkontakteComponent implements OnInit {
   canEdit = this.authService.canEdit;
   canDelete = this.authService.canDelete;
   
+  // Suchfeld
+  searchControl = new FormControl('');
+  
   // Daten
   notfallkontakte: Notfallkontakt[] = [];
   personen: Person[] = [];
@@ -67,6 +80,18 @@ export class NotfallkontakteComponent implements OnInit {
   
   ngOnInit(): void {
     this.loadData();
+    
+    // Suchfeld initialisieren
+    this.searchControl.valueChanges.subscribe(value => {
+      this.applyFilter(value || '');
+    });
+  }
+  
+  /**
+   * Wendet einen Filter auf die Tabelle an
+   */
+  applyFilter(filterValue: string): void {
+    this.dataSource.filter = filterValue.trim().toLowerCase();
   }
   
   /**
@@ -74,42 +99,53 @@ export class NotfallkontakteComponent implements OnInit {
    */
   async loadData(): Promise<void> {
     this.isLoading = true;
-    console.log('Lade Notfallkontakte-Daten...');
     
     try {
-      // Personen laden
+      // Zuerst Personen laden
       await this.personService.loadPersonen();
       this.personen = this.personService.personen();
-      console.log(`${this.personen.length} Personen geladen`);
       
-      // Personen-Map erstellen
+      // Personen-Map erstellen für schnellen Zugriff
       this.personMap.clear();
       this.personen.forEach(person => {
         this.personMap.set(person.id, person);
       });
       
-      // Wenn keine Personen vorhanden sind
-      if (this.personen.length === 0) {
-        this.showSnackBar('Keine Personen in der Datenbank gefunden');
-        return;
-      }
-      
-      // Notfallkontakte laden
+      // Dann Notfallkontakte laden
       await this.kontaktService.loadNotfallkontakte();
       this.notfallkontakte = this.kontaktService.notfallkontakte();
-      console.log(`${this.notfallkontakte.length} Notfallkontakte geladen`);
       
-      // Datenquelle aktualisieren
-      this.dataSource.data = this.notfallkontakte.map(kontakt => ({
-        ...kontakt,
-        personName: this.getPersonName(kontakt.personId)
-      }));
+      // MatTableDataSource konfigurieren
+      this.prepareDataSource();
+      
     } catch (error) {
       console.error('Fehler beim Laden der Daten:', error);
       this.showSnackBar('Fehler beim Laden der Daten');
     } finally {
       this.isLoading = false;
     }
+  }
+  
+  /**
+   * Bereitet die DataSource für die Tabelle vor
+   */
+  private prepareDataSource(): void {
+    this.dataSource.data = this.notfallkontakte;
+    
+    // Suchfilter anpassen
+    this.dataSource.filterPredicate = (data: Notfallkontakt, filter: string) => {
+      const person = this.personMap.get(data.personId);
+      const searchStr = [
+        data.name,
+        data.beziehung,
+        data.telefonnummer,
+        person?.grunddaten.vorname,
+        person?.grunddaten.nachname,
+        person?.grunddaten.grad
+      ].filter(Boolean).join(' ').toLowerCase();
+      
+      return searchStr.includes(filter);
+    };
   }
   
   /**
@@ -182,6 +218,13 @@ export class NotfallkontakteComponent implements OnInit {
   }
   
   /**
+   * Navigiert zur Detailansicht einer Person
+   */
+  navigateToPerson(personId: string): void {
+    this.router.navigate(['/personen', personId]);
+  }
+  
+  /**
    * Gibt den Namen einer Person anhand der ID zurück
    */
   getPersonName(personId: string): string {
@@ -208,13 +251,4 @@ export class NotfallkontakteComponent implements OnInit {
       verticalPosition: 'bottom'
     });
   }
-
-    /**
-   * Navigiert zur Detailseite einer Person
-   */
-    navigateToPerson(personId: string): void {
-      if (personId) {
-        this.router.navigate(['/personen', personId]);
-      }
-    }
 }

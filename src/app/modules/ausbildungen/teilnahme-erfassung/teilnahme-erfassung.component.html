@@ -1,266 +1,147 @@
 <!-- src/app/modules/ausbildungen/teilnahme-erfassung/teilnahme-erfassung.component.html -->
-<div class="teilnahme-erfassung-container">
-  <!-- Zurück-Button -->
-  <div class="back-button-container">
-    <button mat-button color="primary" (click)="cancel()">
-      <mat-icon>arrow_back</mat-icon>
-      Zurück zur Ausbildung
-    </button>
-  </div>
-
-  @if (isLoading()) {
-  <div class="loading-container">
-    <mat-spinner diameter="40"></mat-spinner>
-    <p>Daten werden geladen...</p>
-  </div>
-  } @else if (!ausbildung()) {
-  <mat-card>
-    <mat-card-content>
-      <div class="error-message">
-        <mat-icon>error</mat-icon>
-        <p>Ausbildung nicht gefunden oder Fehler beim Laden der Daten.</p>
+<div class="teilnahme-container">
+    <!-- Zurück-Button -->
+    <div class="back-button-container">
+      <button mat-button color="primary" (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+        Zurück zur Ausbildung
+      </button>
+    </div>
+    
+    @if (isLoading()) {
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Daten werden geladen...</p>
       </div>
-    </mat-card-content>
-  </mat-card>
-  } @else {
-  <!-- Header-Karte mit Ausbildungsinfo -->
-  <mat-card class="header-card">
-    <mat-card-content>
-      <div class="header-content">
-        <div class="ausbildung-info">
-          <h1 class="page-title">Teilnahmen erfassen</h1>
-          <div class="ausbildung-title-container">
-            <h2 class="ausbildung-title">{{ ausbildung()!.titel }}</h2>
-            <span class="typ-badge" [ngClass]="'typ-' + ausbildung()!.typ">
-              {{ ausbildung()!.typ }}
-            </span>
+    } @else if (!ausbildung()) {
+      <mat-card>
+        <mat-card-content>
+          <div class="error-message">
+            <mat-icon>error</mat-icon>
+            <p>Ausbildung nicht gefunden.</p>
           </div>
-          @if (ausbildung()!.beschreibung) {
-          <div class="ausbildung-description">
-            {{ ausbildung()!.beschreibung }}
-          </div>
-          }
-        </div>
+        </mat-card-content>
+      </mat-card>
+    } @else {
+      <div class="page-header">
+        <h1 class="page-title">Teilnahmen erfassen</h1>
+        <div class="page-subtitle">{{ ausbildung()!.titel }} ({{ ausbildung()!.jahr }})</div>
       </div>
-    </mat-card-content>
-  </mat-card>
-
-  <!-- Formular für Datum und Status -->
-  <mat-card class="settings-card">
-    <mat-card-content>
-      <form [formGroup]="teilnahmeForm" class="settings-form">
-        <div class="settings-row">
-          <mat-form-field appearance="outline">
-            <mat-label>Datum</mat-label>
-            <input matInput [matDatepicker]="picker" formControlName="datum" />
-            <mat-datepicker-toggle
-              matIconSuffix
-              [for]="picker"
-            ></mat-datepicker-toggle>
-            <mat-datepicker #picker></mat-datepicker>
-            @if (teilnahmeForm.get('datum')?.hasError('required')) {
-            <mat-error>Datum ist erforderlich</mat-error>
-            }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Standard-Status</mat-label>
-            <mat-select formControlName="defaultStatus">
-              @for (option of statusOptions; track option.value) {
-              <mat-option [value]="option.value">{{ option.label }}</mat-option>
-              }
-            </mat-select>
-            <mat-hint>Wird für alle neuen Teilnahmen verwendet</mat-hint>
-          </mat-form-field>
-
-          <div class="action-buttons">
-            <button
-              mat-raised-button
-              color="primary"
-              [disabled]="teilnahmeForm.invalid || isSaving()"
-              (click)="saveTeilnahmen()"
-            >
-              <mat-icon>save</mat-icon>
-              {{ isSaving() ? "Wird gespeichert..." : "Teilnahmen speichern" }}
-            </button>
-          </div>
-        </div>
-      </form>
-    </mat-card-content>
-  </mat-card>
-
-  <!-- Personen-Tabelle -->
-  <mat-card class="table-card">
-    <mat-card-content>
-      <div class="filter-container">
-        <mat-form-field appearance="outline" class="search-field">
-          <mat-label>Suchen</mat-label>
-          <input
-            matInput
-            (keyup)="applyFilter($event)"
-            placeholder="Nach Namen, Grad, etc. filtern..."
-            [value]="filterValue()"
-          />
-          <mat-icon matSuffix>search</mat-icon>
-        </mat-form-field>
-
-        <div class="status-buttons">
-          <span class="status-label">Ausgewählte Personen:</span>
-          @for (option of statusOptions; track option.value) {
-          <button
-            mat-stroked-button
-            [color]="
-              option.value === 'teilgenommen'
-                ? 'primary'
-                : option.value === 'dispensiert'
-                ? 'accent'
-                : 'warn'
-            "
-            (click)="bulkSetStatus(option.value)"
-          >
-            {{ option.label }}
-          </button>
-          }
-        </div>
-      </div>
-
-      <div class="table-container">
-        <table mat-table [dataSource]="dataSource" class="teilnehmer-table">
-          <!-- Checkbox-Spalte -->
-          <ng-container matColumnDef="select">
-            <th mat-header-cell *matHeaderCellDef>
-              <mat-checkbox
-                (change)="$event ? toggleAllRows() : null"
-                [checked]="selection.hasValue() && isAllSelected()"
-                [indeterminate]="selection.hasValue() && !isAllSelected()"
-                color="primary"
-              >
-              </mat-checkbox>
-            </th>
-            <td mat-cell *matCellDef="let person">
-              <mat-checkbox
-                (click)="$event.stopPropagation()"
-                (change)="$event ? selection.toggle(person) : null"
-                [checked]="selection.isSelected(person)"
-                color="primary"
-              >
-              </mat-checkbox>
-            </td>
-          </ng-container>
-
-          <!-- Grad -->
-          <ng-container matColumnDef="grad">
-            <th mat-header-cell *matHeaderCellDef>Grad</th>
-            <td mat-cell *matCellDef="let person">
-              {{ person.grunddaten.grad }}
-            </td>
-          </ng-container>
-
-          <!-- Name -->
-          <ng-container matColumnDef="name">
-            <th mat-header-cell *matHeaderCellDef>Name</th>
-            <td mat-cell *matCellDef="let person">
-              {{ person.grunddaten.nachname }} {{ person.grunddaten.vorname }}
-            </td>
-          </ng-container>
-
-          <!-- Funktion -->
-          <ng-container matColumnDef="funktion">
-            <th mat-header-cell *matHeaderCellDef>Funktion</th>
-            <td mat-cell *matCellDef="let person">
-              {{ person.grunddaten.funktion }}
-            </td>
-          </ng-container>
-
-          <!-- Zug -->
-          <ng-container matColumnDef="zug">
-            <th mat-header-cell *matHeaderCellDef>Zug</th>
-            <td mat-cell *matCellDef="let person">
-              {{ person.zivilschutz.einteilung.zug }}
-              @if (person.zivilschutz.einteilung.gruppe) { /
-              {{ person.zivilschutz.einteilung.gruppe }}
-              }
-            </td>
-          </ng-container>
-
-          <!-- Status -->
-          <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef>Status</th>
-            <td mat-cell *matCellDef="let person">
-              <mat-form-field appearance="outline" class="status-field">
-                <mat-select
-                  [value]="
-                    person.status || teilnahmeForm.get('defaultStatus')?.value
-                  "
-                  (selectionChange)="setPersonStatus(person, $event.value)"
-                >
+      
+      <div class="form-container">
+        <!-- Teilnahme-Formular -->
+        <mat-card class="form-card">
+          <mat-card-header>
+            <mat-card-title>Teilnahme-Details</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <form [formGroup]="teilnahmeForm" class="form-content">
+              <mat-form-field appearance="outline">
+                <mat-label>Datum</mat-label>
+                <input matInput [matDatepicker]="picker" formControlName="datum">
+                <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+                <mat-datepicker #picker></mat-datepicker>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline">
+                <mat-label>Status</mat-label>
+                <mat-select formControlName="status">
                   @for (option of statusOptions; track option.value) {
-                  <mat-option [value]="option.value">{{
-                    option.label
-                  }}</mat-option>
+                    <mat-option [value]="option.value">{{ option.label }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
-            </td>
-          </ng-container>
-
-          <!-- Bemerkung -->
-          <ng-container matColumnDef="bemerkung">
-            <th mat-header-cell *matHeaderCellDef>Bemerkung</th>
-            <td mat-cell *matCellDef="let person">
-              <mat-form-field appearance="outline" class="bemerkung-field">
-                <input
-                  matInput
-                  [value]="person.bemerkung || ''"
-                  (input)="updateBemerkung(person, $event)"
-                  placeholder="Bemerkung eingeben..."
-                />
+              
+              <mat-form-field appearance="outline">
+                <mat-label>Bemerkung (optional)</mat-label>
+                <textarea matInput formControlName="bemerkung" rows="2"></textarea>
               </mat-form-field>
-            </td>
-          </ng-container>
-
-          <!-- Tabellenzeilen -->
-          <tr
-            mat-header-row
-            *matHeaderRowDef="displayedColumns; sticky: true"
-          ></tr>
-          <tr
-            mat-row
-            *matRowDef="let row; columns: displayedColumns"
-            [class.existing-row]="row.existing"
-            (click)="selection.toggle(row)"
-          ></tr>
-
-          <!-- Keine Daten -->
-          @if (dataSource.data.length === 0) {
-          <tr class="mat-row no-data-row">
-            <td class="mat-cell" [attr.colspan]="displayedColumns.length">
-              <div class="no-data-message">
-                <mat-icon>person_off</mat-icon>
-                <span>Keine Personen gefunden</span>
+            </form>
+          </mat-card-content>
+        </mat-card>
+        
+        <!-- Teilnehmer-Tabelle -->
+        <mat-card class="table-card">
+          <mat-card-header>
+            <mat-card-title>Teilnehmer auswählen</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            @if (personen().length === 0) {
+              <div class="empty-state">
+                <mat-icon>people_outline</mat-icon>
+                <p>Keine aktiven Personen verfügbar.</p>
               </div>
-            </td>
-          </tr>
-          }
-        </table>
+            } @else {
+              <div class="table-container">
+                <table mat-table [dataSource]="dataSource" class="teilnehmer-table">
+                  <!-- Checkbox Column -->
+                  <ng-container matColumnDef="select">
+                    <th mat-header-cell *matHeaderCellDef>
+                      <mat-checkbox 
+                        (change)="$event ? toggleAllRows() : null"
+                        [checked]="selection.hasValue() && isAllSelected()"
+                        [indeterminate]="selection.hasValue() && !isAllSelected()">
+                      </mat-checkbox>
+                    </th>
+                    <td mat-cell *matCellDef="let person">
+                      <mat-checkbox 
+                        (click)="$event.stopPropagation()"
+                        (change)="$event ? selection.toggle(person) : null"
+                        [checked]="selection.isSelected(person)">
+                      </mat-checkbox>
+                    </td>
+                  </ng-container>
+                  
+                  <!-- Grad Column -->
+                  <ng-container matColumnDef="grad">
+                    <th mat-header-cell *matHeaderCellDef>Grad</th>
+                    <td mat-cell *matCellDef="let person">{{ person.grunddaten.grad }}</td>
+                  </ng-container>
+                  
+                  <!-- Name Column -->
+                  <ng-container matColumnDef="name">
+                    <th mat-header-cell *matHeaderCellDef>Name</th>
+                    <td mat-cell *matCellDef="let person">
+                      {{ person.grunddaten.nachname }} {{ person.grunddaten.vorname }}
+                    </td>
+                  </ng-container>
+                  
+                  <!-- Funktion Column -->
+                  <ng-container matColumnDef="funktion">
+                    <th mat-header-cell *matHeaderCellDef>Funktion</th>
+                    <td mat-cell *matCellDef="let person">{{ person.grunddaten.funktion }}</td>
+                  </ng-container>
+                  
+                  <!-- Zug Column -->
+                  <ng-container matColumnDef="zug">
+                    <th mat-header-cell *matHeaderCellDef>Zug</th>
+                    <td mat-cell *matCellDef="let person">{{ person.zivilschutz.einteilung.zug }}</td>
+                  </ng-container>
+                  
+                  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                  <tr 
+                    mat-row 
+                    *matRowDef="let row; columns: displayedColumns;"
+                    (click)="selection.toggle(row)"
+                    [class.selected-row]="selection.isSelected(row)">
+                  </tr>
+                </table>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
       </div>
-    </mat-card-content>
-
-    <mat-card-actions>
-      <div class="card-actions">
-        <button mat-button color="primary" (click)="cancel()">Abbrechen</button>
-
-        <button
-          mat-raised-button
-          color="primary"
+      
+      <div class="action-buttons">
+        <button mat-button (click)="goBack()">Abbrechen</button>
+        <button 
+          mat-raised-button 
+          color="primary" 
           [disabled]="teilnahmeForm.invalid || isSaving()"
-          (click)="saveTeilnahmen()"
-        >
+          (click)="saveTeilnahmen()">
           <mat-icon>save</mat-icon>
-          {{ isSaving() ? "Wird gespeichert..." : "Teilnahmen speichern" }}
+          {{ isSaving() ? 'Wird gespeichert...' : 'Teilnahmen speichern' }}
         </button>
       </div>
-    </mat-card-actions>
-  </mat-card>
-  }
-</div>
+    }
+  </div>

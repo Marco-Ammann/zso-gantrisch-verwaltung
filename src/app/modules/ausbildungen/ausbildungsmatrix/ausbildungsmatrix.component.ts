@@ -22,7 +22,8 @@ import { AusbildungService, PersonService, TeilnahmeService } from '../../../cor
 import { Ausbildung } from '../../../core/models/ausbildung.model';
 import { Person } from '../../../core/models/person.model';
 import { Ausbildungsteilnahme } from '../../../core/models/teilnahme.model';
-
+import { DateAdapter, MAT_DATE_FORMATS, MAT_DATE_LOCALE } from '@angular/material/core';
+import { CustomDateAdapter, CUSTOM_DATE_FORMATS } from '../../../core/utils/custom-date-adapter';
 interface MatrixRow {
   person: Person;
   ausbildungen: Map<string, TeilnahmeInfo>;
@@ -54,6 +55,11 @@ interface TeilnahmeInfo {
     MatTooltipModule,
     MatChipsModule,
     MatSnackBarModule
+  ],
+  providers: [
+    { provide: MAT_DATE_LOCALE, useValue: 'de-CH' },
+    { provide: DateAdapter, useClass: CustomDateAdapter, deps: [MAT_DATE_LOCALE] },
+    { provide: MAT_DATE_FORMATS, useValue: CUSTOM_DATE_FORMATS }
   ],
   templateUrl: './ausbildungsmatrix.component.html',
   styleUrls: ['./ausbildungsmatrix.component.scss']
@@ -146,11 +152,11 @@ export class AusbildungsmatrixComponent implements OnInit {
       await this.ausbildungService.loadAusbildungen();
       this.ausbildungen.set(this.ausbildungService.ausbildungen());
       
-      // Verfügbare Jahre aus den Ausbildungen extrahieren
+      // Verfügbare Jahre extrahieren für den Filter
       const jahre = [...new Set(this.ausbildungen().map(a => a.jahr))];
       this.jahrOptions = jahre.sort((a, b) => b - a); // Absteigend sortieren
       
-      // Standardwert für Jahrfilter setzen, falls vorhanden
+      // Standardwert für Jahrfilter setzen
       if (this.jahrOptions.length > 0 && !this.jahrFilter.value) {
         this.jahrFilter.setValue(this.jahrOptions[0]);
       }

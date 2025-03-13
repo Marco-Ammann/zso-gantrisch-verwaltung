@@ -14,6 +14,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { Ausbildung } from '../../core/models/ausbildung.model';
 
 @Component({
   selector: 'app-dashboard',
@@ -39,6 +40,7 @@ export class DashboardComponent {
   private ausbildungService = inject(AusbildungService);
   private teilnahmeService = inject(TeilnahmeService);
   private router = inject(Router);
+  anstehendeAusbildungen = signal<Ausbildung[]>([]);
   
   // Benutzer aus dem AuthService
   currentUser = this.authService.currentUser;

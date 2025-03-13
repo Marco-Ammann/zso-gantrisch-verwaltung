@@ -1,28 +1,47 @@
-// src/app/modules/ausbildungen/ausbildungsmatrix/ausbildungsmatrix.component.scss
-.ausbildungsmatrix-container {
+.matrix-container {
     padding: 16px;
-    max-width: 1600px;
+    max-width: 1400px;
     margin: 0 auto;
   }
   
   .header-section {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
+    align-items: flex-start;
+    margin-bottom: 20px;
     flex-wrap: wrap;
     gap: 16px;
   }
   
+  .title-section {
+    flex: 1;
+    min-width: 300px;
+  }
+  
   .page-title {
-    margin: 0;
+    margin: 0 0 4px 0;
     font-size: 24px;
     font-weight: 500;
   }
   
-  .action-buttons {
+  .page-subtitle {
+    margin: 0;
+    color: #666;
+  }
+  
+  .filter-section {
     display: flex;
-    gap: 8px;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  
+  .filter-field {
+    width: 150px;
+  }
+  
+  .search-field {
+    width: 250px;
   }
   
   .loading-container {
@@ -38,223 +57,125 @@
     }
   }
   
-  .filter-card {
-    margin-bottom: 16px;
-  }
-  
-  .filter-container {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 16px;
-  }
-  
-  .filter-field {
-    min-width: 150px;
-    flex: 1;
-  }
-  
-  .search-field {
-    min-width: 250px;
-    flex: 2;
-  }
-  
-  .matrix-card {
-    margin-bottom: 16px;
-    overflow: hidden;
-  }
-  
   .table-container {
     overflow-x: auto;
-    max-height: 70vh;
   }
   
   .matrix-table {
     width: 100%;
     
-    .name-column {
-      position: sticky;
-      left: 0;
-      background-color: white;
-      z-index: 1;
+    .mat-column-name {
       min-width: 250px;
-      max-width: 300px;
+      padding-right: 16px;
+      border-right: 1px solid #e0e0e0;
     }
+  }
+  
+  .person-cell {
+    cursor: pointer;
+    transition: background-color 0.2s;
     
-    .name-cell {
-      position: sticky;
-      left: 0;
-      background-color: white;
-      z-index: 1;
-      cursor: pointer;
-      
-      &:hover {
-        background-color: rgba(0, 0, 0, 0.04);
-      }
-    }
-    
-    .ausbildung-column {
-      cursor: pointer;
-      min-width: 120px;
-      
-      &:hover {
-        background-color: rgba(0, 0, 0, 0.04);
-      }
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
     }
   }
   
   .person-info {
     display: flex;
     flex-direction: column;
-    padding: 8px 0;
   }
   
   .person-name {
     font-weight: 500;
   }
   
-  .person-additional {
-    font-size: 12px;
+  .person-details {
+    font-size: 0.85em;
     color: #666;
   }
   
   .ausbildung-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 8px 0;
+    cursor: pointer;
+    min-width: 110px;
+    text-align: center;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
   }
   
   .ausbildung-title {
     font-weight: 500;
-    text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 120px;
+    max-width: 150px;
   }
   
-  .ausbildung-type-badge {
-    margin-top: 4px;
-    padding: 2px 6px;
-    border-radius: 12px;
-    font-size: 0.7em;
-    font-weight: 500;
-    text-transform: uppercase;
+  .ausbildung-type {
+    font-size: 0.8em;
+    color: #666;
   }
   
-  .typ-WK {
-    background-color: #e8f5e9;
-    color: #2e7d32;
+  .status-cell {
+    text-align: center;
   }
   
-  .typ-LG {
-    background-color: #e3f2fd;
-    color: #1565c0;
-  }
-  
-  .typ-KVK {
-    background-color: #fff8e1;
-    color: #f57f17;
-  }
-  
-  .typ-Übung {
-    background-color: #f3e5f5;
-    color: #7b1fa2;
-  }
-  
-  .typ-Kurs {
-    background-color: #e8eaf6;
-    color: #3949ab;
-  }
-  
-  .teilnahme-cell {
+  .status-indicator {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 40px;
+    width: 100%;
+    height: 48px;
     
     mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
+      font-size: 20px;
     }
     
     &.teilgenommen {
-      color: #4caf50;
+      color: #4CAF50;
     }
     
     &.dispensiert {
-      color: #ff9800;
+      color: #FF9800;
     }
     
     &.nicht-teilgenommen {
-      color: #f44336;
+      color: #F44336;
     }
-    
-    &.empty {
-      color: #bdbdbd;
-    }
+  }
+  
+  .status-empty {
+    height: 48px;
+  }
+  
+  .empty-row {
+    padding: 16px;
+    text-align: center;
   }
   
   .no-data-message {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 40px;
-    color: #666;
-    
-    mat-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-      margin-bottom: 16px;
-      color: #bdbdbd;
-    }
-  }
-  
-  .no-data-row {
-    height: 200px;
-  }
-  
-  .no-data-cell {
-    text-align: center;
-  }
-  
-  .legend-card {
-    margin-bottom: 16px;
-  }
-  
-  .legend-title {
-    font-weight: 500;
-    margin-bottom: 8px;
-  }
-  
-  .legend-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-  }
-  
-  .legend-item {
-    display: flex;
-    align-items: center;
     gap: 8px;
+    color: #888;
   }
   
-  .legend-text {
-    font-size: 14px;
-  }
-  
-  // Responsive Anpassungen
+  // Für mobile Ansicht
   @media (max-width: 768px) {
-    .filter-container {
+    .header-section {
       flex-direction: column;
-      align-items: stretch;
     }
     
-    .filter-field, .search-field {
+    .filter-section {
+      width: 100%;
+      justify-content: flex-start;
+    }
+    
+    .filter-field,
+    .search-field {
       width: 100%;
     }
   }

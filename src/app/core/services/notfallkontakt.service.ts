@@ -27,6 +27,10 @@ export class NotfallkontaktService {
   private _selectedKontakt = signal<Notfallkontakt | null>(null);
   public selectedKontakt = computed(() => this._selectedKontakt());
   
+  // Lade-Status Signal
+  private _isLoading = signal<boolean>(false);
+  public isLoading = computed(() => this._isLoading());
+  
   constructor() {
     // Initialisierung: Alle Notfallkontakte laden
     this.loadNotfallkontakte();
@@ -37,15 +41,13 @@ export class NotfallkontaktService {
    */
   async loadNotfallkontakte(): Promise<void> {
     try {
-      console.log('Starte Laden der Notfallkontakte im Service'); // Debug-Log
-      const kontakte = await this.firebaseService.getAllSorted<Notfallkontakt>(
-        this.collectionName, 
-        'name'
-      );
-      console.log('Notfallkontakte geladen:', kontakte.length); // Debug-Log
+      this._isLoading.set(true);
+      const kontakte = await this.firebaseService.getAll<Notfallkontakt>(this.collectionName);
       this._notfallkontakte.set(kontakte);
+      this._isLoading.set(false);
     } catch (error) {
       console.error('Fehler beim Laden der Notfallkontakte:', error);
+      this._isLoading.set(false);
       this._notfallkontakte.set([]); // Leeres Array setzen, damit UI nicht hängt
       throw error;
     }
@@ -56,15 +58,12 @@ export class NotfallkontaktService {
    */
   async getKontakteForPerson(personId: string): Promise<Notfallkontakt[]> {
     try {
-      const kontakte = await this.firebaseService.query<Notfallkontakt>(
+      return await this.firebaseService.query<Notfallkontakt>(
         this.collectionName,
         'personId',
         '==',
         personId
       );
-      
-      // Nach Priorität sortieren
-      return kontakte.sort((a, b) => a.prioritaet - b.prioritaet);
     } catch (error) {
       console.error(`Fehler beim Laden der Notfallkontakte für Person ${personId}:`, error);
       return [];
@@ -94,8 +93,9 @@ export class NotfallkontaktService {
     try {
       const id = await this.firebaseService.add(this.collectionName, kontakt);
       
-      // Aktualisiere den lokalen Zustand
-      await this.loadNotfallkontakte();
+      // Aktualisiere den lokalen Zustand sofort
+      const newKontakt: Notfallkontakt = { ...kontakt, id };
+      this._notfallkontakte.update(kontakte => [...kontakte, newKontakt]);
       
       return id;
     } catch (error) {
@@ -111,13 +111,17 @@ export class NotfallkontaktService {
     try {
       await this.firebaseService.update(this.collectionName, id, kontakt);
       
-      // Aktualisiere den lokalen Zustand
-      await this.loadNotfallkontakte();
+      // Aktualisiere den lokalen Zustand sofort
+      this._notfallkontakte.update(kontakte => 
+        kontakte.map(k => k.id === id ? { ...k, ...kontakt } : k)
+      );
       
       // Wenn der aktuell ausgewählte Kontakt aktualisiert wurde, aktualisiere auch diesen
       const selectedKontakt = this._selectedKontakt();
       if (selectedKontakt && selectedKontakt.id === id) {
-        await this.getKontaktById(id);
+        this._selectedKontakt.update(current => 
+          current ? { ...current, ...kontakt } : null
+        );
       }
     } catch (error) {
       console.error(`Fehler beim Aktualisieren des Notfallkontakts mit ID ${id}:`, error);

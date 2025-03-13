@@ -1,104 +1,143 @@
 // src/app/modules/personen/notfallkontakte/notfallkontakte.component.scss
 .notfallkontakte-container {
-    padding: 16px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
+  padding: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.title-area {
+  flex: 1;
+  min-width: 250px;
+}
+
+.page-title {
+  margin: 0 0 4px 0;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.page-subtitle {
+  margin: 0;
+  color: #666;
+}
+
+.action-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.search-field {
+  width: 300px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
   
-  .header-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 16px;
+  p {
+    margin-top: 16px;
+    color: #666;
   }
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.notfallkontakte-table {
+  width: 100%;
   
-  .page-title {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 500;
-  }
-  
-  .loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px;
-    
-    p {
-      margin-top: 16px;
-      color: #666;
-    }
-  }
-  
-  .table-container {
-    overflow-x: auto;
-  }
-  
-  .notfallkontakte-table {
-    width: 100%;
-    
-    .mat-column-aktionen {
-      width: 120px;
-      text-align: center;
-    }
-    
-    .mat-column-prioritaet {
-      width: 150px;
-    }
-  }
-  
-  .action-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 4px;
-  }
-  
-  .prioritaet-badge {
-    padding: 4px 8px;
-    border-radius: 16px;
-    font-size: 0.8em;
-    font-weight: 500;
-  }
-  
-  .prio-1 {
-    background-color: #e8f5e9;
-    color: #2e7d32;
-  }
-  
-  .prio-2 {
-    background-color: #e3f2fd;
-    color: #1565c0;
-  }
-  
-  .person-link {
-    color: #1976d2;
-    text-decoration: none;
-    cursor: pointer;
-    
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-  
-  .empty-row {
-    padding: 16px;
+  .mat-column-aktionen {
+    width: 120px;
     text-align: center;
   }
   
-  .no-data-message {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    color: #888;
+  .mat-column-prioritaet {
+    width: 150px;
   }
   
-  @media (max-width: 768px) {
-    .header-section {
-      flex-direction: column;
-      align-items: flex-start;
-    }
+  .mat-column-telefonnummer {
+    font-family: 'Courier New', monospace;
   }
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.prioritaet-badge {
+  padding: 4px 8px;
+  border-radius: 16px;
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
+.prio-1 {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.prio-2 {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.person-link {
+  color: #1976d2;
+  text-decoration: none;
+  cursor: pointer;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.empty-row {
+  padding: 16px;
+  text-align: center;
+}
+
+.no-data-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #888;
+}
+
+.phone-number {
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+  .header-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .action-area {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-field {
+    width: 100%;
+  }
+}
