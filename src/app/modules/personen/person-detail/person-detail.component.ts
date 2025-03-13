@@ -168,15 +168,36 @@ export class PersonDetailComponent implements OnInit {
   /**
    * Formatiert ein Datum für die Anzeige
    */
-  formatDate(date: Date | string | undefined): string {
+  formatDate(date: Date | string | any): string {
     if (!date) return '-';
-
-    return new Date(date).toLocaleDateString('de-CH');
+    
+    try {
+      // Wenn date ein Firestore Timestamp ist
+      if (date && typeof date.toDate === 'function') {
+        return date.toDate().toLocaleDateString('de-CH');
+      }
+      // Wenn date ein Date-Objekt oder ein String ist
+      return new Date(date).toLocaleDateString('de-CH');
+    } catch (error) {
+      console.error('Fehler bei der Datumsformatierung:', error);
+      return '-';
+    }
   }
 
   formatFirestoreTimestamp(date: any): string {
     if (!date) return '-';
-    return date.toDate().toLocaleDateString('de-CH');
+    
+    try {
+      // Wenn date ein Firestore Timestamp ist (hat eine toDate-Methode)
+      if (date && typeof date.toDate === 'function') {
+        return date.toDate().toLocaleDateString('de-CH');
+      }
+      // Wenn date ein Date-Objekt oder ein String ist
+      return new Date(date).toLocaleDateString('de-CH');
+    } catch (error) {
+      console.error('Fehler bei der Datumsformatierung:', error);
+      return '-';
+    }
   }
 
   /**

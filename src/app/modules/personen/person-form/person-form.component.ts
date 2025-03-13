@@ -213,9 +213,15 @@ export class PersonFormComponent implements OnInit {
    * Formular mit bestehenden Daten befüllen
    */
   private patchPersonForm(person: Person): void {
-    // Grunddaten und einfache Felder patchen
+    // Grunddaten und einfache Felder patchen, aber ohne Geburtsdatum
     this.personForm.patchValue({
-      grunddaten: person.grunddaten,
+      grunddaten: {
+        vorname: person.grunddaten.vorname,
+        nachname: person.grunddaten.nachname,
+        grad: person.grunddaten.grad,
+        funktion: person.grunddaten.funktion,
+        // Geburtsdatum wird separat behandelt
+      },
       kontaktdaten: person.kontaktdaten,
       zivilschutz: {
         grundausbildung: person.zivilschutz.grundausbildung,
@@ -238,14 +244,29 @@ export class PersonFormComponent implements OnInit {
     if (person.grunddaten.geburtsdatum) {
       let dateValue: Date | null = null;
 
-      if (typeof person.grunddaten.geburtsdatum === 'string') {
-        // Wenn das Datum als String kommt (z.B. aus Firebase)
-        dateValue = this.formatDateForForm(person.grunddaten.geburtsdatum);
-      } else if (person.grunddaten.geburtsdatum instanceof Date) {
-        dateValue = person.grunddaten.geburtsdatum;
-      }
+      try {
+        // Prüfen ob es ein Firestore-Timestamp ist (hat eine toDate-Methode)
+        if (
+          person.grunddaten.geburtsdatum &&
+          typeof (person.grunddaten.geburtsdatum as any).toDate === 'function'
+        ) {
+          dateValue = (person.grunddaten.geburtsdatum as any).toDate();
+        }
+        // Wenn es bereits ein Date-Objekt ist
+        else if (person.grunddaten.geburtsdatum instanceof Date) {
+          dateValue = person.grunddaten.geburtsdatum;
+        }
+        // Wenn es ein String ist
+        else {
+          dateValue = new Date(person.grunddaten.geburtsdatum as any);
+        }
 
-      this.personForm.get('grunddaten.geburtsdatum')?.setValue(dateValue);
+        if (dateValue && !isNaN(dateValue.getTime())) {
+          this.personForm.get('grunddaten.geburtsdatum')?.setValue(dateValue);
+        }
+      } catch (error) {
+        console.error('Fehler bei der Datumskonvertierung:', error);
+      }
     }
 
     // Arrays befüllen

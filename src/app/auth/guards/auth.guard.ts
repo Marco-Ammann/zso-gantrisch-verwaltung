@@ -7,6 +7,8 @@ import {
 } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { User } from '../../core/models';
+import { AuthStateService } from '../services/auth-state.service';
+import { filter, map, take } from 'rxjs';
 
 /**
  * Angular 19+ style Guard-Funktion für den Routenschutz
@@ -17,29 +19,33 @@ export const authGuard: CanActivateFn = (
   state: RouterStateSnapshot
 ) => {
   const router = inject(Router);
-  const authService = inject(AuthService);
+  const authStateService = inject(AuthStateService);
+  const authService = inject(AuthService); // An dieser Stelle injizieren, nicht in der map-Funktion
   
-  // Prüfen, ob der Benutzer eingeloggt ist
-  if (!authService.isAuthenticated()) {
-    router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
-    return false;
-  }
-  
-  // Prüfen, ob eine Rollenanforderung definiert ist
-  const requiredRoles = route.data['roles'] as User['role'][] | undefined;
-  
-  if (requiredRoles && requiredRoles.length > 0) {
-    // Prüfen, ob der Benutzer eine der erforderlichen Rollen hat
-    const hasRequiredRole = authService.hasRole(requiredRoles);
-    
-    if (!hasRequiredRole) {
-      // Bei fehlenden Berechtigungen zur Startseite umleiten
-      router.navigate(['/']);
-      return false;
-    }
-  }
-  
-  return true;
+  return authStateService.isAuthenticated.pipe(
+    filter(authState => authState !== null), // Warte, bis der Zustand bekannt ist
+    take(1),
+    map(isAuthenticated => {
+      if (!isAuthenticated) {
+        console.log('Nicht authentifiziert, Umleitung zur Login-Seite');
+        router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
+        return false;
+      }
+      
+      // Prüfe Rollenanforderung
+      const requiredRoles = route.data['roles'] as User['role'][] | undefined;
+      
+      if (requiredRoles && requiredRoles.length > 0) {
+        const hasRequiredRole = authService.hasRole(requiredRoles);
+        if (!hasRequiredRole) {
+          router.navigate(['/']);
+          return false;
+        }
+      }
+      
+      return true;
+    })
+  );
 };
 
 /**
@@ -50,13 +56,17 @@ export const publicGuard: CanActivateFn = (
   state: RouterStateSnapshot
 ) => {
   const router = inject(Router);
-  const authService = inject(AuthService);
+  const authStateService = inject(AuthStateService);
   
-  // Wenn der Benutzer bereits eingeloggt ist, zur Startseite umleiten
-  if (authService.isAuthenticated()) {
-    router.navigate(['/']);
-    return false;
-  }
-  
-  return true;
+  return authStateService.isAuthenticated.pipe(
+    filter(authState => authState !== null),
+    take(1),
+    map(isAuthenticated => {
+      if (isAuthenticated) {
+        router.navigate(['/']);
+        return false;
+      }
+      return true;
+    })
+  );
 };
