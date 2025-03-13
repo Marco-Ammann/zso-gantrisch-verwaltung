@@ -3,7 +3,7 @@
   <div class="header-section">
     <div class="title-area">
       <h1 class="page-title">Notfallkontakte</h1>
-      <p class="page-subtitle">Verwaltung von Notfallkontakten für alle Personen</p>
+      <p class="page-subtitle">Zentrales Verzeichnis aller Notfallkontakte für schnellen Zugriff in Notfällen</p>
     </div>
     
     <div class="action-area">
@@ -13,118 +13,218 @@
         <mat-icon matSuffix>search</mat-icon>
       </mat-form-field>
       
-      @if (canEdit()) {
-        <button 
-          mat-raised-button 
-          color="primary"
-          (click)="openKontaktDialog()">
-          <mat-icon>add</mat-icon>
-          Neuer Notfallkontakt
-        </button>
-      }
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Priorität</mat-label>
+        <mat-select [formControl]="priorityFilter">
+          <mat-option value="alle">Alle Prioritäten</mat-option>
+          <mat-option value="1">Primärkontakte</mat-option>
+          <mat-option value="2">Sekundärkontakte</mat-option>
+        </mat-select>
+      </mat-form-field>
+      
+      <button 
+        mat-raised-button 
+        color="primary"
+        (click)="openKontaktDialog()"
+        *ngIf="canEdit()">
+        <mat-icon>add</mat-icon>
+        Neuer Notfallkontakt
+      </button>
     </div>
   </div>
   
-  @if (isLoading) {
-    <div class="loading-container">
-      <mat-spinner diameter="40"></mat-spinner>
-      <p>Daten werden geladen...</p>
-    </div>
-  } @else {
-    <mat-card>
-      <div class="table-container">
-        <table mat-table [dataSource]="dataSource" matSort class="notfallkontakte-table">
-          <!-- Person -->
-          <ng-container matColumnDef="person">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Person</th>
-            <td mat-cell *matCellDef="let kontakt">
-              <a 
-                class="person-link" 
-                (click)="navigateToPerson(kontakt.personId)">
-                {{ getPersonName(kontakt.personId) }}
-              </a>
-            </td>
-          </ng-container>
-          
-          <!-- Name -->
-          <ng-container matColumnDef="name">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
-            <td mat-cell *matCellDef="let kontakt">{{ kontakt.name }}</td>
-          </ng-container>
-          
-          <!-- Beziehung -->
-          <ng-container matColumnDef="beziehung">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Beziehung</th>
-            <td mat-cell *matCellDef="let kontakt">{{ kontakt.beziehung }}</td>
-          </ng-container>
-          
-          <!-- Telefonnummer -->
-          <ng-container matColumnDef="telefonnummer">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Telefonnummer</th>
-            <td mat-cell *matCellDef="let kontakt" class="phone-number">{{ kontakt.telefonnummer }}</td>
-          </ng-container>
-          
-          <!-- Priorität -->
-          <ng-container matColumnDef="prioritaet">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Priorität</th>
-            <td mat-cell *matCellDef="let kontakt">
-              <span 
-                class="prioritaet-badge" 
-                [ngClass]="kontakt.prioritaet === 1 ? 'prio-1' : 'prio-2'">
-                {{ formatPrioritaet(kontakt.prioritaet) }}
-              </span>
-            </td>
-          </ng-container>
-          
-          <!-- Aktionen -->
-          <ng-container matColumnDef="aktionen">
-            <th mat-header-cell *matHeaderCellDef>Aktionen</th>
-            <td mat-cell *matCellDef="let kontakt">
-              <div class="action-buttons">
-                @if (canEdit()) {
-                  <button 
-                    mat-icon-button 
-                    color="primary"
-                    matTooltip="Bearbeiten"
-                    (click)="openKontaktDialog(kontakt)">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                }
-                
-                @if (canDelete()) {
-                  <button 
-                    mat-icon-button 
-                    color="warn"
-                    matTooltip="Löschen"
-                    (click)="deleteKontakt(kontakt)">
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                }
-              </div>
-            </td>
-          </ng-container>
-          
-          <!-- Tabellenzeilen -->
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-          
-          <!-- Leere Zeile wenn keine Daten -->
-          <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell empty-row" [attr.colspan]="displayedColumns.length">
-              <div class="no-data-message">
-                <mat-icon>info</mat-icon>
-                <span>Keine Notfallkontakte gefunden</span>
-              </div>
-            </td>
-          </tr>
-        </table>
+  <div *ngIf="isLoading" class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Daten werden geladen...</p>
+  </div>
+  
+  <!-- Info-Karte -->
+  <mat-card *ngIf="!isLoading" class="info-card">
+    <mat-card-content>
+      <div class="info-with-icon">
+        <mat-icon color="primary">info</mat-icon>
+        <span>
+          Notfallkontakte sind nach Priorität geordnet. Bei Notfällen sollten zuerst Primärkontakte (Priorität 1) 
+          kontaktiert werden.
+        </span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+  
+  <!-- Alternativansicht: Gruppierte Karten statt Tabelle -->
+  <div *ngIf="viewMode === 'cards'" class="card-container">
+    <div *ngFor="let person of groupedContacts | keyvalue" class="person-group">
+      <div class="person-header" (click)="togglePersonGroup(person.key)">
+        <h3>{{ getPersonName(person.key) }}</h3>
+        <mat-icon>{{ expandedGroups.has(person.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
       </div>
       
-      <!-- Paginierung -->
-      <mat-paginator 
-        [pageSizeOptions]="[10, 25, 50, 100]"
-        showFirstLastButtons>
-      </mat-paginator>
-    </mat-card>
-  }
+      <div *ngIf="expandedGroups.has(person.key)" class="contacts-list">
+        <mat-card *ngFor="let kontakt of person.value" class="contact-card">
+          <mat-card-content>
+            <div class="contact-header">
+              <span class="contact-name">{{ kontakt.name }}</span>
+              <span class="priority-badge" [ngClass]="kontakt.prioritaet === 1 ? 'priority-1' : 'priority-2'">
+                {{ kontakt.prioritaet === 1 ? 'Primär' : 'Sekundär' }}
+              </span>
+            </div>
+            
+            <div class="contact-details">
+              <div class="detail-item">
+                <mat-icon>people</mat-icon>
+                <span>{{ kontakt.beziehung }}</span>
+              </div>
+              
+              <div class="detail-item">
+                <mat-icon>phone</mat-icon>
+                <span class="phone-number">{{ kontakt.telefonnummer }}</span>
+              </div>
+            </div>
+            
+            <div class="contact-actions">
+              <button 
+                mat-icon-button 
+                color="primary"
+                matTooltip="Person anzeigen"
+                (click)="navigateToPerson(kontakt.personId)">
+                <mat-icon>visibility</mat-icon>
+              </button>
+              
+              <button 
+                mat-icon-button 
+                color="primary"
+                matTooltip="Bearbeiten"
+                (click)="openKontaktDialog(kontakt)"
+                *ngIf="canEdit()">
+                <mat-icon>edit</mat-icon>
+              </button>
+              
+              <button 
+                mat-icon-button 
+                color="warn"
+                matTooltip="Löschen"
+                (click)="deleteKontakt(kontakt)"
+                *ngIf="canDelete()">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Standard-Tabellenansicht -->
+  <mat-card *ngIf="!isLoading && viewMode === 'table'">
+    <mat-card-header>
+      <div class="view-controls">
+        <button mat-button (click)="setViewMode('table')" [class.active]="$any(viewMode) === 'table'">
+          <mat-icon>view_list</mat-icon> Tabelle
+        </button>
+        <button mat-button (click)="setViewMode('cards')" [class.active]="$any(viewMode) === 'cards'">
+          <mat-icon>view_module</mat-icon> Karten
+        </button>
+      </div>
+    </mat-card-header>
+    
+    <div class="table-container">
+      <table mat-table [dataSource]="dataSource" matSort class="notfallkontakte-table">
+        <!-- Person -->
+        <ng-container matColumnDef="person">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Person</th>
+          <td mat-cell *matCellDef="let kontakt">
+            <a 
+              class="person-link" 
+              (click)="navigateToPerson(kontakt.personId)">
+              {{ getPersonName(kontakt.personId) }}
+            </a>
+          </td>
+        </ng-container>
+        
+        <!-- Name -->
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
+          <td mat-cell *matCellDef="let kontakt">{{ kontakt.name }}</td>
+        </ng-container>
+        
+        <!-- Beziehung -->
+        <ng-container matColumnDef="beziehung">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Beziehung</th>
+          <td mat-cell *matCellDef="let kontakt">{{ kontakt.beziehung }}</td>
+        </ng-container>
+        
+        <!-- Telefonnummer -->
+        <ng-container matColumnDef="telefonnummer">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Telefonnummer</th>
+          <td mat-cell *matCellDef="let kontakt" class="phone-number">{{ kontakt.telefonnummer }}</td>
+        </ng-container>
+        
+        <!-- Priorität -->
+        <ng-container matColumnDef="prioritaet">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Priorität</th>
+          <td mat-cell *matCellDef="let kontakt">
+            <span 
+              class="prioritaet-badge" 
+              [ngClass]="kontakt.prioritaet === 1 ? 'prio-1' : 'prio-2'">
+              {{ formatPrioritaet(kontakt.prioritaet) }}
+            </span>
+          </td>
+        </ng-container>
+        
+        <!-- Aktionen -->
+        <ng-container matColumnDef="aktionen">
+          <th mat-header-cell *matHeaderCellDef>Aktionen</th>
+          <td mat-cell *matCellDef="let kontakt">
+            <div class="action-buttons">
+              <button 
+                mat-icon-button 
+                color="primary"
+                matTooltip="Person anzeigen"
+                (click)="navigateToPerson(kontakt.personId); $event.stopPropagation()">
+                <mat-icon>visibility</mat-icon>
+              </button>
+              
+              <button 
+                mat-icon-button 
+                color="primary"
+                matTooltip="Bearbeiten"
+                (click)="openKontaktDialog(kontakt); $event.stopPropagation()"
+                *ngIf="canEdit()">
+                <mat-icon>edit</mat-icon>
+              </button>
+              
+              <button 
+                mat-icon-button 
+                color="warn"
+                matTooltip="Löschen"
+                (click)="deleteKontakt(kontakt); $event.stopPropagation()"
+                *ngIf="canDelete()">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </td>
+        </ng-container>
+        
+        <!-- Tabellenzeilen -->
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        
+        <!-- Leere Zeile wenn keine Daten -->
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell empty-row" [attr.colspan]="displayedColumns.length">
+            <div class="no-data-message">
+              <mat-icon>info</mat-icon>
+              <span>Keine Notfallkontakte gefunden</span>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+    
+    <!-- Paginierung -->
+    <mat-paginator 
+      [pageSizeOptions]="[10, 25, 50, 100]"
+      showFirstLastButtons>
+    </mat-paginator>
+  </mat-card>
 </div>

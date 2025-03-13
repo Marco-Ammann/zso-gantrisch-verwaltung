@@ -19,6 +19,13 @@ export const PERSONEN_ROUTES: Routes = [
     data: { roles: ['admin', 'oberleutnant', 'leutnant'] }
   },
   {
+    path: 'notfallkontakte',
+    loadComponent: () => import('./notfallkontakte/notfallkontakte.component')
+      .then(m => m.NotfallkontakteComponent),
+    title: 'Notfallkontakte - ZSO Gantrisch',
+    canActivate: [authGuard]
+  },
+  {
     path: ':id',
     loadComponent: () => import('./person-detail/person-detail.component')
       .then(m => m.PersonDetailComponent),
@@ -32,12 +39,5 @@ export const PERSONEN_ROUTES: Routes = [
     title: 'Person bearbeiten - ZSO Gantrisch',
     canActivate: [authGuard],
     data: { roles: ['admin', 'oberleutnant', 'leutnant'] }
-  },
-  {
-    path: 'notfallkontakte',
-    loadComponent: () => import('./notfallkontakte/notfallkontakte.component')
-      .then(m => m.NotfallkontakteComponent),
-    title: 'Notfallkontakte - ZSO Gantrisch',
-    canActivate: [authGuard]
   }
 ];

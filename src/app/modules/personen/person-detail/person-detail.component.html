@@ -76,6 +76,86 @@
       <mat-card class="detail-card">
         <mat-card-content>
           <mat-tab-group>
+
+            <mat-tab label="Notfallkontakte">
+              <div class="tab-content">
+                <div class="info-section">
+                  <h2 class="section-title">
+                    <mat-icon>contact_phone</mat-icon>
+                    Notfallkontakte
+                  </h2>
+                  
+                  <!-- Button zum Hinzufügen eines neuen Kontakts -->
+                  <div class="action-buttons" style="margin-bottom: 16px;">
+                    <button 
+                      mat-raised-button 
+                      color="primary"
+                      (click)="openKontaktDialog()"
+                      *ngIf="canEdit()">
+                      <mat-icon>add</mat-icon>
+                      Neuen Notfallkontakt hinzufügen
+                    </button>
+                  </div>
+                  
+                  <!-- Ladezustand -->
+                  <div *ngIf="loadingKontakte" class="loading-container">
+                    <mat-spinner diameter="30"></mat-spinner>
+                    <p>Notfallkontakte werden geladen...</p>
+                  </div>
+                  
+                  <!-- Wenn keine Kontakte vorhanden sind -->
+                  <p *ngIf="!loadingKontakte && notfallkontakte.length === 0" class="no-data-message">
+                    Keine Notfallkontakte erfasst.
+                  </p>
+                  
+                  <!-- Liste der Notfallkontakte -->
+                  <div *ngIf="!loadingKontakte && notfallkontakte.length > 0">
+                    <mat-card *ngFor="let kontakt of notfallkontakte" 
+                             style="margin-bottom: 16px; padding: 16px;">
+                      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                          <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                            <span style="font-weight: 500; font-size: 18px;">{{ kontakt.name }}</span>
+                            <span style="margin-left: 12px; font-size: 0.9em; padding: 4px 8px; border-radius: 16px;"
+                                  [ngClass]="kontakt.prioritaet === 1 ? 'status-aktiv' : 'status-neu'">
+                              {{ kontakt.prioritaet === 1 ? 'Primärkontakt' : 'Sekundärkontakt' }}
+                            </span>
+                          </div>
+                          <div style="margin-bottom: 4px;">
+                            <strong>Beziehung:</strong> {{ kontakt.beziehung }}
+                          </div>
+                          <div style="font-family: 'Courier New', monospace; letter-spacing: 0.5px;">
+                            <mat-icon style="font-size: 16px; height: 16px; width: 16px; vertical-align: middle; margin-right: 8px;">phone</mat-icon> 
+                            {{ kontakt.telefonnummer }}
+                          </div>
+                        </div>
+                        
+                        <div class="action-buttons">
+                          <button 
+                            mat-icon-button 
+                            color="primary"
+                            matTooltip="Bearbeiten"
+                            (click)="openKontaktDialog(kontakt)"
+                            *ngIf="canEdit()">
+                            <mat-icon>edit</mat-icon>
+                          </button>
+                          
+                          <button 
+                            mat-icon-button 
+                            color="warn"
+                            matTooltip="Löschen"
+                            (click)="deleteKontakt(kontakt)"
+                            *ngIf="canDelete()">
+                            <mat-icon>delete</mat-icon>
+                          </button>
+                        </div>
+                      </div>
+                    </mat-card>
+                  </div>
+                </div>
+              </div>
+            </mat-tab>
+
             <!-- Tab: Kontaktdaten -->
             <mat-tab label="Kontaktdaten">
               <div class="tab-content">

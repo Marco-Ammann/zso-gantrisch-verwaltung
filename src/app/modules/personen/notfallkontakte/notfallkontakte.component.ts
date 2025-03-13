@@ -1,5 +1,5 @@
 // src/app/modules/personen/notfallkontakte/notfallkontakte.component.ts
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
@@ -8,13 +8,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatSortModule, Sort } from '@angular/material/sort';
+import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
+import { MatSortModule, MatSort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
 import { NotfallkontaktService } from '../../../core/services/notfallkontakt.service';
@@ -46,12 +47,16 @@ import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog/confir
     MatSnackBarModule,
     MatProgressSpinnerModule,
     MatInputModule,
-    MatFormFieldModule
+    MatFormFieldModule,
+    MatSelectModule
   ],
   templateUrl: './notfallkontakte.component.html',
   styleUrls: ['./notfallkontakte.component.scss']
 })
 export class NotfallkontakteComponent implements OnInit {
+  @ViewChild(MatSort) sort!: MatSort;
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  
   private kontaktService = inject(NotfallkontaktService);
   private personService = inject(PersonService);
   private authService = inject(AuthService);
@@ -63,8 +68,18 @@ export class NotfallkontakteComponent implements OnInit {
   canEdit = this.authService.canEdit;
   canDelete = this.authService.canDelete;
   
-  // Suchfeld
+  // Filter-Controls
   searchControl = new FormControl('');
+  priorityFilter = new FormControl('alle');
+  
+  // View mode - properly typed as union type
+  viewMode: 'table' | 'cards' = 'table';
+  
+  // Für Kartenansicht - erweiterte Gruppen
+  expandedGroups = new Set<string>();
+  
+  // Für gruppierte Kontakte nach Person
+  groupedContacts: Record<string, Notfallkontakt[]> = {};
   
   // Daten
   notfallkontakte: Notfallkontakt[] = [];
@@ -79,40 +94,119 @@ export class NotfallkontakteComponent implements OnInit {
   isLoading = true;
   
   ngOnInit(): void {
-    console.log('Notfallkontakte:', this.notfallkontakte);
     this.loadData();
     
     // Suchfeld initialisieren
     this.searchControl.valueChanges.subscribe(value => {
       this.applyFilter(value || '');
     });
+    
+    // Prioritätsfilter initialisieren
+    this.priorityFilter.valueChanges.subscribe(value => {
+      this.applyPriorityFilter(value || 'alle');
+    });
+  }
+  
+  ngAfterViewInit() {
+    if (this.sort && this.paginator) {
+      this.dataSource.sort = this.sort;
+      this.dataSource.paginator = this.paginator;
+    }
   }
   
   /**
-   * Wendet einen Filter auf die Tabelle an
+   * Switches between table and card views
+   * @param mode The view mode to set ('table' or 'cards')
+   */
+  setViewMode(mode: 'table' | 'cards'): void {
+    this.viewMode = mode;
+    if (mode === 'cards') {
+      this.groupContacts();
+    }
+  }
+  
+  /**
+   * Gruppiert Kontakte nach Person für die Kartenansicht
+   */
+  groupContacts(): void {
+    this.groupedContacts = {};
+    this.notfallkontakte.forEach(kontakt => {
+      if (!this.groupedContacts[kontakt.personId]) {
+        this.groupedContacts[kontakt.personId] = [];
+      }
+      this.groupedContacts[kontakt.personId].push(kontakt);
+    });
+    
+    // Kontakte nach Priorität sortieren
+    Object.keys(this.groupedContacts).forEach(personId => {
+      this.groupedContacts[personId].sort((a, b) => a.prioritaet - b.prioritaet);
+    });
+    
+    // Die ersten 3 Gruppen standardmäßig erweitern
+    this.expandedGroups.clear();
+    Object.keys(this.groupedContacts).slice(0, 3).forEach(personId => {
+      this.expandedGroups.add(personId);
+    });
+  }
+  
+  /**
+   * Erweitert oder schließt eine Personengruppe
+   */
+  togglePersonGroup(personId: string): void {
+    if (this.expandedGroups.has(personId)) {
+      this.expandedGroups.delete(personId);
+    } else {
+      this.expandedGroups.add(personId);
+    }
+  }
+  
+  /**
+   * Wendet einen Textfilter auf die Tabelle an
    */
   applyFilter(filterValue: string): void {
     this.dataSource.filter = filterValue.trim().toLowerCase();
   }
   
-
   /**
-   * Loads person data and emergency contacts concurrently
-   * 
-   * @returns A Promise that resolves when all data is loaded and processed
+   * Wendet einen Prioritätsfilter an
+   */
+  applyPriorityFilter(priority: string): void {
+    const originalData = this.notfallkontakte;
+    let filteredData: Notfallkontakt[];
+    
+    if (priority === 'alle') {
+      filteredData = originalData;
+    } else {
+      const priorityNumber = parseInt(priority);
+      filteredData = originalData.filter(kontakt => kontakt.prioritaet === priorityNumber);
+    }
+    
+    this.dataSource.data = filteredData;
+    
+    // Gruppierte Daten aktualisieren wenn im Kartenansichtsmodus
+    if (this.viewMode === 'cards') {
+      this.groupContacts();
+    }
+  }
+  
+  /**
+   * Lädt Personendaten und Notfallkontakte
    */
   async loadData(): Promise<void> {
     this.isLoading = true;
     
     try {
-      // Load people and emergency contacts in parallel for better performance
+      // Personen und Notfallkontakte parallel laden
       await Promise.all([
         this.loadPersonen(),
         this.loadNotfallkontakte()
       ]);
       
-      // Prepare table data source with loaded data
+      // Datentabelle vorbereiten
       this.prepareDataSource();
+      
+      // Gruppierte Daten für Kartenansicht
+      this.groupContacts();
     } catch (error) {
       console.error('Fehler beim Laden der Daten:', error);
       this.showSnackBar('Fehler beim Laden der Daten');
@@ -122,20 +216,20 @@ export class NotfallkontakteComponent implements OnInit {
   }
   
   /**
-   * Loads all people and creates a lookup map
+   * Lädt alle Personen und erstellt eine Lookup-Map
    */
   private async loadPersonen(): Promise<void> {
     await this.personService.loadPersonen();
     this.personen = this.personService.personen();
     
-    // Create lookup map for quick access
+    // Lookup-Map erstellen
     this.personMap = new Map(
       this.personen.map(person => [person.id, person])
     );
   }
   
   /**
-   * Loads all emergency contacts
+   * Lädt alle Notfallkontakte
    */
   private async loadNotfallkontakte(): Promise<void> {
     await this.kontaktService.loadNotfallkontakte();
@@ -143,12 +237,12 @@ export class NotfallkontakteComponent implements OnInit {
   }
   
   /**
-   * Bereitet die DataSource für die Tabelle vor
+   * Prepares the DataSource for the table with custom filtering and sorting
    */
   private prepareDataSource(): void {
     this.dataSource.data = this.notfallkontakte;
     
-    // Suchfilter anpassen
+    // Custom filter
     this.dataSource.filterPredicate = (data: Notfallkontakt, filter: string) => {
       const person = this.personMap.get(data.personId);
       const searchStr = [
@@ -161,6 +255,18 @@ export class NotfallkontakteComponent implements OnInit {
       ].filter(Boolean).join(' ').toLowerCase();
       
       return searchStr.includes(filter);
+    };
+    
+    // Custom sorting
+    this.dataSource.sortingDataAccessor = (item, property) => {
+      switch(property) {
+        case 'person':
+          const person = this.personMap.get(item.personId);
+          return person ? `${person.grunddaten.nachname} ${person.grunddaten.vorname}` : '';
+        default:
+          // Fix: Use type assertion to tell TypeScript this is safe
+          return (item as any)[property];
+      }
     };
   }
   
@@ -254,7 +360,7 @@ export class NotfallkontakteComponent implements OnInit {
    * Formatiert die Priorität
    */
   formatPrioritaet(prioritaet: number): string {
-    return prioritaet === 1 ? 'Erste Priorität' : 'Zweite Priorität';
+    return prioritaet === 1 ? 'Primärkontakt' : 'Sekundärkontakt';
   }
   
   /**
