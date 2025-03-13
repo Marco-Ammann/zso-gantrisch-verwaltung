@@ -79,6 +79,7 @@ export class NotfallkontakteComponent implements OnInit {
   isLoading = true;
   
   ngOnInit(): void {
+    console.log('Notfallkontakte:', this.notfallkontakte);
     this.loadData();
     
     // Suchfeld initialisieren
@@ -94,36 +95,51 @@ export class NotfallkontakteComponent implements OnInit {
     this.dataSource.filter = filterValue.trim().toLowerCase();
   }
   
+
   /**
-   * Lädt Notfallkontakte und Personen
+   * Loads person data and emergency contacts concurrently
+   * 
+   * @returns A Promise that resolves when all data is loaded and processed
    */
   async loadData(): Promise<void> {
     this.isLoading = true;
     
     try {
-      // Zuerst Personen laden
-      await this.personService.loadPersonen();
-      this.personen = this.personService.personen();
+      // Load people and emergency contacts in parallel for better performance
+      await Promise.all([
+        this.loadPersonen(),
+        this.loadNotfallkontakte()
+      ]);
       
-      // Personen-Map erstellen für schnellen Zugriff
-      this.personMap.clear();
-      this.personen.forEach(person => {
-        this.personMap.set(person.id, person);
-      });
-      
-      // Dann Notfallkontakte laden
-      await this.kontaktService.loadNotfallkontakte();
-      this.notfallkontakte = this.kontaktService.notfallkontakte();
-      
-      // MatTableDataSource konfigurieren
+      // Prepare table data source with loaded data
       this.prepareDataSource();
-      
     } catch (error) {
       console.error('Fehler beim Laden der Daten:', error);
       this.showSnackBar('Fehler beim Laden der Daten');
     } finally {
       this.isLoading = false;
     }
+  }
+  
+  /**
+   * Loads all people and creates a lookup map
+   */
+  private async loadPersonen(): Promise<void> {
+    await this.personService.loadPersonen();
+    this.personen = this.personService.personen();
+    
+    // Create lookup map for quick access
+    this.personMap = new Map(
+      this.personen.map(person => [person.id, person])
+    );
+  }
+  
+  /**
+   * Loads all emergency contacts
+   */
+  private async loadNotfallkontakte(): Promise<void> {
+    await this.kontaktService.loadNotfallkontakte();
+    this.notfallkontakte = this.kontaktService.notfallkontakte();
   }
   
   /**

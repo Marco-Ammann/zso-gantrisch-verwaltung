@@ -17,14 +17,23 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
+import { 
+  MatNativeDateModule, 
+  DateAdapter, 
+  MAT_DATE_FORMATS, 
+  MAT_DATE_LOCALE 
+} from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { AusbildungService } from '../../../core/services/ausbildung.service';
 import { Ausbildung } from '../../../core/models/ausbildung.model';
-import { DateAdapter, MAT_DATE_FORMATS, MAT_DATE_LOCALE } from '@angular/material/core';
 import { CustomDateAdapter, CUSTOM_DATE_FORMATS } from '../../../core/utils/custom-date-adapter';
+
+interface TypeOption {
+  value: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-ausbildung-form',
@@ -53,25 +62,26 @@ import { CustomDateAdapter, CUSTOM_DATE_FORMATS } from '../../../core/utils/cust
   styleUrls: ['./ausbildung-form.component.scss']
 })
 export class AusbildungFormComponent implements OnInit {
+  // Injected services
   private fb = inject(FormBuilder);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private ausbildungService = inject(AusbildungService);
   private snackBar = inject(MatSnackBar);
 
-  // Formular
-  ausbildungForm: FormGroup;
+  // Form
+  ausbildungForm: FormGroup = this.createAusbildungForm();
 
-  // Modus (neu oder bearbeiten)
+  // Mode (new or edit)
   isEditMode = false;
   ausbildungId: string | null = null;
 
-  // Zustandsvariablen
+  // State variables
   isLoading = false;
   isSaving = false;
 
-  // Optionen für Ausbildungstyp
-  typOptions = [
+  // Options for training type
+  typOptions: TypeOption[] = [
     { value: 'WK', label: 'Wiederholungskurs' },
     { value: 'LG', label: 'Lehrgang' },
     { value: 'KVK', label: 'Kadervorbereitung' },
@@ -79,16 +89,9 @@ export class AusbildungFormComponent implements OnInit {
     { value: 'Kurs', label: 'Kurs' }
   ];
 
-  constructor() {
-    // Formular initialisieren
-    this.ausbildungForm = this.createAusbildungForm();
-  }
-
   ngOnInit(): void {
-    // isLoading direkt setzen, nicht in einem setTimeout (verhindert ExpressionChangedAfterItHasBeenCheckedError)
     this.isLoading = true;
 
-    // Prüfen, ob wir im Bearbeitungsmodus sind
     this.route.paramMap.subscribe(params => {
       const id = params.get('id');
       if (id) {
@@ -96,14 +99,13 @@ export class AusbildungFormComponent implements OnInit {
         this.ausbildungId = id;
         this.loadAusbildung(id);
       } else {
-        // Wenn keine ID vorhanden ist, isLoading zurücksetzen
         this.isLoading = false;
       }
     });
   }
 
   /**
-   * Erstellt die Formularstruktur
+   * Creates the form structure with default values
    */
   private createAusbildungForm(): FormGroup {
     const currentYear = new Date().getFullYear();
@@ -113,54 +115,33 @@ export class AusbildungFormComponent implements OnInit {
       typ: ['WK', [Validators.required]],
       jahr: [currentYear, [Validators.required, Validators.min(2000), Validators.max(2100)]],
       datum: [new Date(), [Validators.required]],
-      erforderlich: [false] // Standard: Nicht erforderlich
+      erforderlich: [false]
     });
   }
 
   /**
-   * Lädt eine bestehende Ausbildung zum Bearbeiten
+   * Loads an existing training for editing
    */
   async loadAusbildung(id: string): Promise<void> {
     try {
       const ausbildung = await this.ausbildungService.getAusbildungById(id);
 
-      if (ausbildung) {
-        // Datum korrekt konvertieren, wenn es ein Firestore Timestamp ist
-        let datumValue: Date | null = null;
-        
-        if (ausbildung.datum) {
-          // Wenn es ein Firestore Timestamp ist
-          if (typeof ausbildung.datum.toDate === 'function') {
-            datumValue = ausbildung.datum.toDate();
-          } 
-          // Wenn es ein Date-Objekt ist
-          else if (ausbildung.datum instanceof Date) {
-            datumValue = ausbildung.datum;
-          }
-          // Wenn es ein String oder Number ist
-          else if (typeof ausbildung.datum === 'string' || typeof ausbildung.datum === 'number') {
-            datumValue = new Date(ausbildung.datum);
-          }
-        }
-
-        // Wenn kein gültiges Datum extrahiert werden konnte, aktuelles Datum verwenden
-        if (!datumValue || isNaN(datumValue.getTime())) {
-          datumValue = new Date();
-        }
-
-        // Form patchen mit konvertiertem Datum
-        this.ausbildungForm.patchValue({
-          titel: ausbildung.titel,
-          beschreibung: ausbildung.beschreibung || '',
-          typ: ausbildung.typ,
-          jahr: ausbildung.jahr,
-          datum: datumValue,
-          erforderlich: ausbildung.erforderlich !== undefined ? ausbildung.erforderlich : false
-        });
-      } else {
+      if (!ausbildung) {
         this.showSnackBar('Ausbildung nicht gefunden');
         this.router.navigate(['/ausbildungen']);
+        return;
       }
+
+      const datumValue = this.parseDateValue(ausbildung.datum);
+      
+      this.ausbildungForm.patchValue({
+        titel: ausbildung.titel,
+        beschreibung: ausbildung.beschreibung || '',
+        typ: ausbildung.typ,
+        jahr: ausbildung.jahr,
+        datum: datumValue,
+        erforderlich: ausbildung.erforderlich ?? false
+      });
     } catch (error) {
       console.error('Fehler beim Laden der Ausbildung:', error);
       this.showSnackBar('Fehler beim Laden der Ausbildungsdaten');
@@ -170,7 +151,32 @@ export class AusbildungFormComponent implements OnInit {
   }
 
   /**
-   * Speichert die Ausbildung
+   * Parses a date value from different possible formats
+   */
+  private parseDateValue(dateInput: any): Date {
+    if (!dateInput) return new Date();
+    
+    // Firestore Timestamp
+    if (typeof dateInput.toDate === 'function') {
+      return dateInput.toDate();
+    }
+    
+    // Date object
+    if (dateInput instanceof Date) {
+      return dateInput;
+    }
+    
+    // String or number
+    if (typeof dateInput === 'string' || typeof dateInput === 'number') {
+      const parsedDate = new Date(dateInput);
+      return isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+    }
+    
+    return new Date();
+  }
+
+  /**
+   * Saves the current training form data
    */
   async saveAusbildung(): Promise<void> {
     if (this.ausbildungForm.invalid) {
@@ -178,37 +184,25 @@ export class AusbildungFormComponent implements OnInit {
       this.showSnackBar('Bitte überprüfen Sie die Eingaben');
       return;
     }
-  
+    
     this.isSaving = true;
-  
+    
     try {
       const formValue = this.ausbildungForm.value;
-  
+      const ausbildungData = {
+        titel: formValue.titel,
+        beschreibung: formValue.beschreibung,
+        typ: formValue.typ,
+        datum: formValue.datum,
+        jahr: formValue.jahr,
+        erforderlich: formValue.erforderlich
+      };
+      
       if (this.isEditMode && this.ausbildungId) {
-        // Bestehende Ausbildung aktualisieren
-        const ausbildungData: Partial<Ausbildung> = {
-          titel: formValue.titel,
-          beschreibung: formValue.beschreibung,
-          typ: formValue.typ,
-          datum: formValue.datum,
-          jahr: formValue.jahr,
-          erforderlich: formValue.erforderlich
-        };
-        
         await this.ausbildungService.updateAusbildung(this.ausbildungId, ausbildungData);
         this.showSnackBar('Ausbildung erfolgreich aktualisiert');
         this.router.navigate(['/ausbildungen', this.ausbildungId]);
       } else {
-        // Neue Ausbildung erstellen - OHNE ID-Feld
-        const ausbildungData = {
-          titel: formValue.titel,
-          beschreibung: formValue.beschreibung,
-          typ: formValue.typ,
-          datum: formValue.datum,
-          jahr: formValue.jahr,
-          erforderlich: formValue.erforderlich
-        };
-        
         const newId = await this.ausbildungService.createAusbildung(ausbildungData);
         this.showSnackBar('Ausbildung erfolgreich erstellt');
         this.router.navigate(['/ausbildungen', newId]);
@@ -222,7 +216,7 @@ export class AusbildungFormComponent implements OnInit {
   }
 
   /**
-   * Prüft, ob ein Formularfeld einen Fehler hat
+   * Checks if a form field has a specific error
    */
   hasError(controlName: string, errorCode: string): boolean {
     const control = this.ausbildungForm.get(controlName);
@@ -230,12 +224,11 @@ export class AusbildungFormComponent implements OnInit {
   }
 
   /**
-   * Markiert alle Formularfelder als berührt
+   * Marks all form fields as touched to trigger validation
    */
   private markFormGroupTouched(formGroup: FormGroup): void {
     Object.values(formGroup.controls).forEach(control => {
       control.markAsTouched();
-
       if (control instanceof FormGroup) {
         this.markFormGroupTouched(control);
       }
@@ -243,7 +236,7 @@ export class AusbildungFormComponent implements OnInit {
   }
 
   /**
-   * Abbrechen und zurück navigieren
+   * Cancels editing and navigates back
    */
   cancel(): void {
     if (this.isEditMode && this.ausbildungId) {
@@ -254,7 +247,7 @@ export class AusbildungFormComponent implements OnInit {
   }
 
   /**
-   * Zeigt eine Snackbar-Benachrichtigung an
+   * Shows a snackbar notification
    */
   private showSnackBar(message: string): void {
     this.snackBar.open(message, 'Schließen', {

@@ -43,10 +43,10 @@ import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog/confir
     MatDialogModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
-    MatSelectModule
+    MatSelectModule,
   ],
   templateUrl: './ausbildungen-liste.component.html',
-  styleUrls: ['./ausbildungen-liste.component.scss']
+  styleUrls: ['./ausbildungen-liste.component.scss'],
 })
 export class AusbildungenListeComponent implements OnInit {
   private ausbildungService = inject(AusbildungService);
@@ -73,7 +73,7 @@ export class AusbildungenListeComponent implements OnInit {
     { value: 'LG', label: 'LG' },
     { value: 'KVK', label: 'KVK' },
     { value: 'Übung', label: 'Übung' },
-    { value: 'Kurs', label: 'Kurs' }
+    { value: 'Kurs', label: 'Kurs' },
   ];
 
   // Tabellenkonfiguration
@@ -82,7 +82,7 @@ export class AusbildungenListeComponent implements OnInit {
     'titel',
     'jahr',
     'erforderlich',
-    'aktionen'
+    'aktionen',
   ];
   dataSource = new MatTableDataSource<Ausbildung>([]);
 
@@ -112,6 +112,7 @@ export class AusbildungenListeComponent implements OnInit {
     }
   }
 
+
   /**
    * Lädt Ausbildungen vom Service und wendet Filter an
    */
@@ -128,27 +129,29 @@ export class AusbildungenListeComponent implements OnInit {
     }
   }
 
+
   /**
    * Aktualisiert die Datenquelle basierend auf den Filtern
    */
   updateDataSource(): void {
     // Gefilterte Ausbildungen vom Service
     let filteredAusbildungen = this.ausbildungService.filteredAusbildungen();
-    
+
     // Typ-Filter anwenden
     const typValue = this.typFilter.value;
     if (typValue && typValue !== 'alle') {
       filteredAusbildungen = filteredAusbildungen.filter(
-        ausbildung => ausbildung.typ === typValue
+        (ausbildung) => ausbildung.typ === typValue
       );
     }
-    
+
     // Datenquelle aktualisieren
     this.dataSource.data = filteredAusbildungen;
 
     // Log zur Fehlerbehebung
     console.log('Datenquelle aktualisiert:', this.dataSource.data);
   }
+
 
   /**
    * Zur Detailseite einer Ausbildung navigieren
@@ -162,6 +165,7 @@ export class AusbildungenListeComponent implements OnInit {
     }
   }
 
+
   /**
    * Zum Bearbeitungsformular einer Ausbildung navigieren
    */
@@ -174,18 +178,48 @@ export class AusbildungenListeComponent implements OnInit {
     }
   }
 
+
   /**
-   * Ausbildung löschen mit Bestätigungsdialog
+   * Deletes an Ausbildung after confirmation.
+   * Shows a dialog and processes the deletion if confirmed.
+   *
+   * @param ausbildung - The Ausbildung to delete
+   * @param event - The triggering event
    */
   deleteAusbildung(ausbildung: Ausbildung, event: Event): void {
     event.stopPropagation();
 
-    if (!ausbildung || !ausbildung.id) {
-      this.showSnackBar('Fehler: Ausbildung hat keine ID');
+    if (!this.isValidAusbildung(ausbildung)) {
       return;
     }
 
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+    const dialogRef = this.openConfirmationDialog(ausbildung);
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        this.performDeletion(ausbildung.id);
+      }
+    });
+  }
+
+
+  /**
+   * Validates if an Ausbildung can be deleted
+   */
+  private isValidAusbildung(ausbildung: Ausbildung): boolean {
+    if (!ausbildung?.id) {
+      this.showSnackBar('Fehler: Ausbildung hat keine ID');
+      return false;
+    }
+    return true;
+  }
+
+
+  /**
+   * Opens the confirmation dialog
+   */
+  private openConfirmationDialog(ausbildung: Ausbildung) {
+    return this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
       data: {
         title: 'Ausbildung löschen',
@@ -194,30 +228,42 @@ export class AusbildungenListeComponent implements OnInit {
         cancelText: 'Abbrechen',
       },
     });
-
-    dialogRef.afterClosed().subscribe(async (result) => {
-      if (result) {
-        try {
-          await this.ausbildungService.deleteAusbildung(ausbildung.id);
-          this.showSnackBar('Ausbildung erfolgreich gelöscht');
-          this.loadAusbildungen();
-        } catch (error) {
-          console.error('Fehler beim Löschen der Ausbildung:', error);
-          this.showSnackBar('Fehler beim Löschen der Ausbildung');
-        }
-      }
-    });
   }
 
+
   /**
-   * Neue Ausbildung erstellen
+   * Executes the deletion process
+   */
+  private async performDeletion(ausbildungId: string): Promise<void> {
+    try {
+      await this.ausbildungService.deleteAusbildung(ausbildungId);
+      this.showSnackBar('Ausbildung erfolgreich gelöscht');
+      this.loadAusbildungen();
+    } catch (error) {
+      console.error('Fehler beim Löschen der Ausbildung:', error);
+      this.showSnackBar('Fehler beim Löschen der Ausbildung');
+    }
+  }
+
+
+  /**
+   * Navigates to the ausbildungen creation page.
+   *
+   * This method redirects the user to the route '/ausbildungen/neu',
+   * which is responsible for displaying the form to create a new ausbildung.
    */
   createAusbildung(): void {
     this.router.navigate(['/ausbildungen/neu']);
   }
 
+
   /**
-   * Zur Teilnahmeerfassung einer Ausbildung navigieren
+   * Navigates to the teilnahmen page for a specific ausbildung.
+   * Prevents the default event behavior and event propagation.
+   *
+   * @param ausbildung - The ausbildung object to register participation for
+   * @param event - The DOM event that triggered this method
+   * @throws Shows a snackbar error message if the ausbildung has no ID
    */
   erfasseTeilnahme(ausbildung: Ausbildung, event: Event): void {
     event.stopPropagation();
@@ -227,6 +273,7 @@ export class AusbildungenListeComponent implements OnInit {
       this.showSnackBar('Fehler: Ausbildung hat keine ID');
     }
   }
+  
 
   /**
    * Snackbar-Benachrichtigung anzeigen

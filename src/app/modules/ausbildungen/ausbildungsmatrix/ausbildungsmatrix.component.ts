@@ -18,12 +18,23 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ViewChild } from '@angular/core';
 
-import { AusbildungService, PersonService, TeilnahmeService } from '../../../core/services';
+import {
+  AusbildungService,
+  PersonService,
+  TeilnahmeService,
+} from '../../../core/services';
 import { Ausbildung } from '../../../core/models/ausbildung.model';
 import { Person } from '../../../core/models/person.model';
 import { Ausbildungsteilnahme } from '../../../core/models/teilnahme.model';
-import { DateAdapter, MAT_DATE_FORMATS, MAT_DATE_LOCALE } from '@angular/material/core';
-import { CustomDateAdapter, CUSTOM_DATE_FORMATS } from '../../../core/utils/custom-date-adapter';
+import {
+  DateAdapter,
+  MAT_DATE_FORMATS,
+  MAT_DATE_LOCALE,
+} from '@angular/material/core';
+import {
+  CustomDateAdapter,
+  CUSTOM_DATE_FORMATS,
+} from '../../../core/utils/custom-date-adapter';
 interface MatrixRow {
   person: Person;
   ausbildungen: Map<string, TeilnahmeInfo>;
@@ -54,15 +65,19 @@ interface TeilnahmeInfo {
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatChipsModule,
-    MatSnackBarModule
+    MatSnackBarModule,
   ],
   providers: [
     { provide: MAT_DATE_LOCALE, useValue: 'de-CH' },
-    { provide: DateAdapter, useClass: CustomDateAdapter, deps: [MAT_DATE_LOCALE] },
-    { provide: MAT_DATE_FORMATS, useValue: CUSTOM_DATE_FORMATS }
+    {
+      provide: DateAdapter,
+      useClass: CustomDateAdapter,
+      deps: [MAT_DATE_LOCALE],
+    },
+    { provide: MAT_DATE_FORMATS, useValue: CUSTOM_DATE_FORMATS },
   ],
   templateUrl: './ausbildungsmatrix.component.html',
-  styleUrls: ['./ausbildungsmatrix.component.scss']
+  styleUrls: ['./ausbildungsmatrix.component.scss'],
 })
 export class AusbildungsmatrixComponent implements OnInit {
   private personService = inject(PersonService);
@@ -79,210 +94,282 @@ export class AusbildungsmatrixComponent implements OnInit {
   ausbildungen = signal<Ausbildung[]>([]);
   teilnahmen = signal<Ausbildungsteilnahme[]>([]);
   displayedColumns = signal<string[]>(['name']);
-  
+
   // Filter
   jahrFilter = new FormControl<number | null>(new Date().getFullYear());
   typFilter = new FormControl<string>('alle');
   searchControl = new FormControl<string>('');
-  
+
   // Zustände
   isLoading = signal(true);
   matrixData = signal<MatrixRow[]>([]);
-  
-  // Ausbildungstypoptionen
+
+
+  /**
+   * Options for training type filter dropdown
+   * 
+   * Defines the available course types that can be filtered in the training matrix
+   */
   typOptions = [
     { value: 'alle', label: 'Alle Typen' },
-    { value: 'WK', label: 'WK' },
-    { value: 'LG', label: 'LG' },
-    { value: 'KVK', label: 'KVK' },
+    { value: 'WK', label: 'WK' }, // Wiederholungskurs
+    { value: 'LG', label: 'LG' }, // Lehrgang
+    { value: 'KVK', label: 'KVK' }, // Kadervorbereitungskurs
     { value: 'Übung', label: 'Übung' },
-    { value: 'Kurs', label: 'Kurs' }
+    { value: 'Kurs', label: 'Kurs' },
   ];
-  
+
   // Datenquellen für die Tabelle
   dataSource = new MatTableDataSource<MatrixRow>([]);
-  
+
   // Jahre für das Auswahlfeld
   jahrOptions: number[] = [];
 
+
   ngOnInit(): void {
     this.loadData();
-    
+
     // Filter-Events abonnieren
     this.jahrFilter.valueChanges.subscribe(() => this.updateMatrix());
     this.typFilter.valueChanges.subscribe(() => this.updateMatrix());
-    this.searchControl.valueChanges.subscribe(value => {
+    this.searchControl.valueChanges.subscribe((value) => {
       this.dataSource.filter = value?.toLowerCase() || '';
     });
   }
 
+
   /**
-   * Initialisiert die Datenquelle mit MatSort und MatPaginator
+   * Lifecycle hook that runs after the component view is fully initialized.
+   * Configures sorting, pagination, and custom filtering for the data table.
    */
   ngAfterViewInit(): void {
+    // Set up sorting and pagination
     this.dataSource.sort = this.sort;
     this.dataSource.paginator = this.paginator;
-    
-    // Suchfilter definieren
+
+    // Configure custom search filter across multiple person properties
     this.dataSource.filterPredicate = (data: MatrixRow, filter: string) => {
-      const searchStr = (
-        data.person.grunddaten.grad + ' ' +
-        data.person.grunddaten.nachname + ' ' +
-        data.person.grunddaten.vorname + ' ' +
-        data.person.grunddaten.funktion + ' ' +
-        data.person.zivilschutz.einteilung.zug
-      ).toLowerCase();
+      const personData = data.person.grunddaten;
       
-      return searchStr.indexOf(filter) !== -1;
+      // Build searchable text by combining relevant person properties
+      const searchableText = [
+        personData.grad,
+        personData.nachname,
+        personData.vorname,
+        personData.funktion,
+        data.person.zivilschutz.einteilung.zug
+      ]
+        .filter(Boolean)  // Remove any undefined/null values
+        .join(' ')
+        .toLowerCase();
+
+      return searchableText.includes(filter);
     };
   }
 
+
   /**
-   * Lädt alle erforderlichen Daten
+   * Loads and initializes all data for the training matrix.
    */
   async loadData(): Promise<void> {
     this.isLoading.set(true);
-    
+
     try {
-      // Personen laden
-      await this.personService.loadPersonen();
-      this.personen.set(this.personService.personen());
-      
-      // Ausbildungen laden
-      await this.ausbildungService.loadAusbildungen();
-      this.ausbildungen.set(this.ausbildungService.ausbildungen());
-      
-      // Verfügbare Jahre extrahieren für den Filter
-      const jahre = [...new Set(this.ausbildungen().map(a => a.jahr))];
-      this.jahrOptions = jahre.sort((a, b) => b - a); // Absteigend sortieren
-      
-      // Standardwert für Jahrfilter setzen
-      if (this.jahrOptions.length > 0 && !this.jahrFilter.value) {
-        this.jahrFilter.setValue(this.jahrOptions[0]);
-      }
-      
-      // Teilnahmen laden
-      await this.teilnahmeService.loadTeilnahmen();
-      this.teilnahmen.set(this.teilnahmeService.teilnahmen());
-      
-      // Matrix erstellen
+      await this.loadAllData();
+      this.setupYearFilter();
       this.updateMatrix();
     } catch (error) {
-      console.error('Fehler beim Laden der Daten:', error);
-      this.showSnackBar('Fehler beim Laden der Daten');
+      this.handleError(error);
     } finally {
       this.isLoading.set(false);
     }
   }
 
+
   /**
-   * Aktualisiert die Matrix basierend auf den Filtern
+   * Loads people, trainings, and participations from services.
+   */
+  private async loadAllData(): Promise<void> {
+    await this.personService.loadPersonen();
+    this.personen.set(this.personService.personen());
+
+    await this.ausbildungService.loadAusbildungen();
+    this.ausbildungen.set(this.ausbildungService.ausbildungen());
+
+    await this.teilnahmeService.loadTeilnahmen();
+    this.teilnahmen.set(this.teilnahmeService.teilnahmen());
+  }
+
+
+  /**
+   * Sets up the year filter with available options.
+   */
+  private setupYearFilter(): void {
+    const years = [...new Set(this.ausbildungen().map(a => a.jahr))];
+    this.jahrOptions = years.sort((a, b) => b - a);
+
+    if (this.jahrOptions.length > 0 && !this.jahrFilter.value) {
+      this.jahrFilter.setValue(this.jahrOptions[0]);
+    }
+  }
+
+
+  /**
+   * Handles errors during data loading.
+   */
+  private handleError(error: any): void {
+    console.error('Fehler beim Laden der Daten:', error);
+    this.showSnackBar('Fehler beim Laden der Daten');
+  }
+
+
+  /**
+   * Updates the training matrix data based on selected filters.
+   * 
+   * Creates a matrix showing each person's participation status in relevant trainings.
    */
   updateMatrix(): void {
-    // Filter anwenden
+    const filteredAusbildungen = this.getFilteredAusbildungen();
+    this.updateDisplayColumns(filteredAusbildungen);
+    this.buildMatrixData(filteredAusbildungen);
+  }
+
+
+  /**
+   * Applies year and type filters to the training data.
+   */
+  private getFilteredAusbildungen(): Ausbildung[] {
     const selectedJahr = this.jahrFilter.value;
     const selectedTyp = this.typFilter.value;
     
-    // Ausbildungen nach Jahr und Typ filtern
-    let filteredAusbildungen = this.ausbildungen();
+    let filtered = this.ausbildungen();
     
     if (selectedJahr !== null) {
-      filteredAusbildungen = filteredAusbildungen.filter(a => a.jahr === selectedJahr);
+      filtered = filtered.filter(a => a.jahr === selectedJahr);
     }
     
     if (selectedTyp && selectedTyp !== 'alle') {
-      filteredAusbildungen = filteredAusbildungen.filter(a => a.typ === selectedTyp);
+      filtered = filtered.filter(a => a.typ === selectedTyp);
     }
     
-    // Nach Titel sortieren
-    filteredAusbildungen.sort((a, b) => a.titel.localeCompare(b.titel));
-    
-    // Spalten für die Tabelle definieren
+    return filtered.sort((a, b) => a.titel.localeCompare(b.titel));
+  }
+
+
+  /**
+   * Updates table columns based on filtered trainings.
+   */
+  private updateDisplayColumns(filteredAusbildungen: Ausbildung[]): void {
     const columns = ['name', ...filteredAusbildungen.map(a => a.id)];
     this.displayedColumns.set(columns);
-    
-    // Matrix-Daten erstellen
-    const matrixData: MatrixRow[] = this.personen().map(person => {
-      const row: MatrixRow = {
-        person,
-        ausbildungen: new Map()
-      };
+  }
+
+
+  /**
+   * Builds matrix data by mapping persons to their training participations.
+   */
+  private buildMatrixData(filteredAusbildungen: Ausbildung[]): void {
+    const matrixData = this.personen().map(person => {
+      const ausbildungenMap = new Map<string, TeilnahmeInfo>();
       
-      // Für jede Ausbildung prüfen, ob eine Teilnahme existiert
       filteredAusbildungen.forEach(ausbildung => {
-        const teilnahme = this.teilnahmen().find(
-          t => t.personId === person.id && t.ausbildungId === ausbildung.id
-        );
+        const teilnahme = this.getTeilnahmeForPersonAndAusbildung(person.id, ausbildung.id);
         
         if (teilnahme) {
-          row.ausbildungen.set(ausbildung.id, {
+          ausbildungenMap.set(ausbildung.id, {
             status: teilnahme.status,
             datum: teilnahme.datum as Date,
-            bemerkung: teilnahme.bemerkung
+            bemerkung: teilnahme.bemerkung,
           });
         }
       });
       
-      return row;
+      return { person, ausbildungen: ausbildungenMap };
     });
     
     this.matrixData.set(matrixData);
     this.dataSource.data = matrixData;
   }
 
+
+  /**
+   * Finds participation record for a specific person and training.
+   */
+  private getTeilnahmeForPersonAndAusbildung(personId: string, ausbildungId: string): Ausbildungsteilnahme | undefined {
+    return this.teilnahmen().find(
+      t => t.personId === personId && t.ausbildungId === ausbildungId
+    );
+  }
+
+
   /**
    * Prüft, ob eine Person an einer Ausbildung teilgenommen hat
    */
-  getTeilnahmeInfo(row: MatrixRow, ausbildungId: string): TeilnahmeInfo | undefined {
+  getTeilnahmeInfo(
+    row: MatrixRow,
+    ausbildungId: string
+  ): TeilnahmeInfo | undefined {
     return row.ausbildungen.get(ausbildungId);
   }
+
 
   /**
    * Liefert die CSS-Klasse für eine Teilnahme basierend auf dem Status
    */
   getTeilnahmeClass(status?: string): string {
     if (!status) return '';
-    
+
     switch (status) {
-      case 'teilgenommen': return 'teilgenommen';
-      case 'dispensiert': return 'dispensiert';
-      case 'nicht teilgenommen': return 'nicht-teilgenommen';
-      default: return '';
+      case 'teilgenommen':
+        return 'teilgenommen';
+      case 'dispensiert':
+        return 'dispensiert';
+      case 'nicht teilgenommen':
+        return 'nicht-teilgenommen';
+      default:
+        return '';
     }
   }
+
 
   /**
    * Liefert ein Symbol für eine Teilnahme basierend auf dem Status
    */
   getTeilnahmeIcon(status?: string): string {
     if (!status) return '';
-    
+
     switch (status) {
-      case 'teilgenommen': return 'check_circle';
-      case 'dispensiert': return 'warning';
-      case 'nicht teilgenommen': return 'cancel';
-      default: return '';
+      case 'teilgenommen':
+        return 'check_circle';
+      case 'dispensiert':
+        return 'warning';
+      case 'nicht teilgenommen':
+        return 'cancel';
+      default:
+        return '';
     }
   }
+
 
   /**
    * Formatiert ein Datum für die Anzeige
    */
   formatDate(date: any): string {
     if (!date) return '';
-    
+
     try {
       // Wenn date ein Firestore Timestamp ist
       if (date && typeof date.toDate === 'function') {
         return date.toDate().toLocaleDateString('de-CH');
       }
-      
+
       // Wenn date ein Date-Objekt oder ein String ist
       return new Date(date).toLocaleDateString('de-CH');
     } catch (error) {
       return '';
     }
   }
+  
 
   /**
    * Navigiert zur Personendetailansicht
@@ -291,6 +378,7 @@ export class AusbildungsmatrixComponent implements OnInit {
     this.router.navigate(['/personen', person.id]);
   }
 
+
   /**
    * Navigiert zur Ausbildungsdetailansicht
    */
@@ -298,56 +386,96 @@ export class AusbildungsmatrixComponent implements OnInit {
     this.router.navigate(['/ausbildungen', ausbildungId]);
   }
 
+
   /**
-   * Exportiert die Matrix als CSV-Datei
+   * Exports the current filtered training matrix data as a CSV file.
+   * 
+   * Generates a CSV containing person details and their training participation status
+   * based on the currently applied filters, then triggers the download.
    */
   exportCsv(): void {
-    // Ausbildungen basierend auf aktueller Filterung holen
-    const filteredAusbildungen = this.ausbildungen().filter(a => {
-      const matchesJahr = this.jahrFilter.value === null || a.jahr === this.jahrFilter.value;
-      const matchesTyp = !this.typFilter.value || this.typFilter.value === 'alle' || a.typ === this.typFilter.value;
-      return matchesJahr && matchesTyp;
-    });
+    const filteredAusbildungen = this.getFilteredAusbildungen();
+    const csvContent = this.generateCsvContent(filteredAusbildungen);
+    this.downloadCsv(csvContent);
     
-    // Header-Zeile erstellen
-    let csvContent = 'Grad,Name,Vorname,Funktion,Zug';
-    filteredAusbildungen.forEach(ausbildung => {
-      csvContent += `,${ausbildung.titel}`;
-    });
-    csvContent += '\n';
+    this.showSnackBar('CSV-Export erfolgreich');
+  }
+
+
+  /**
+   * Generates the CSV content with header row and data rows
+   */
+  private generateCsvContent(filteredAusbildungen: Ausbildung[]): string {
+    // Create header row
+    let csvContent = this.generateCsvHeader(filteredAusbildungen);
     
-    // Daten-Zeilen erstellen
+    // Create data rows for each person
     this.dataSource.filteredData.forEach(row => {
-      const person = row.person;
-      
-      csvContent += `${person.grunddaten.grad},`;
-      csvContent += `${person.grunddaten.nachname},`;
-      csvContent += `${person.grunddaten.vorname},`;
-      csvContent += `${person.grunddaten.funktion},`;
-      csvContent += `${person.zivilschutz.einteilung.zug}`;
-      
-      // Ausbildungsteilnahmen hinzufügen
-      filteredAusbildungen.forEach(ausbildung => {
-        const teilnahme = row.ausbildungen.get(ausbildung.id);
-        csvContent += `,${teilnahme ? teilnahme.status : ''}`;
-      });
-      
-      csvContent += '\n';
+      csvContent += this.generateCsvRow(row, filteredAusbildungen);
     });
     
-    // CSV-Datei erstellen und herunterladen
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
+    return csvContent;
+  }
+
+
+  /**
+   * Generates the CSV header row with person fields and training titles
+   */
+  private generateCsvHeader(filteredAusbildungen: Ausbildung[]): string {
+    const baseHeader = 'Grad,Name,Vorname,Funktion,Zug';
+    const ausbildungsHeader = filteredAusbildungen
+      .map(ausbildung => ausbildung.titel)
+      .join(',');
+      
+    return `${baseHeader},${ausbildungsHeader}\n`;
+  }
+
+
+  /**
+   * Generates a CSV row for a person with their training participation status
+   */
+  private generateCsvRow(row: MatrixRow, filteredAusbildungen: Ausbildung[]): string {
+    const person = row.person;
     
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Ausbildungsmatrix_${this.jahrFilter.value || 'Alle'}.csv`);
+    // Add person details
+    let rowContent = [
+      person.grunddaten.grad,
+      person.grunddaten.nachname,
+      person.grunddaten.vorname,
+      person.grunddaten.funktion,
+      person.zivilschutz.einteilung.zug
+    ].join(',');
+    
+    // Add participation status for each training
+    const teilnahmenContent = filteredAusbildungen
+      .map(ausbildung => {
+        const teilnahme = row.ausbildungen.get(ausbildung.id);
+        return teilnahme ? teilnahme.status : '';
+      })
+      .join(',');
+    
+    return `${rowContent},${teilnahmenContent}\n`;
+  }
+
+
+  /**
+   * Creates and triggers download of CSV file
+   */
+  private downloadCsv(csvContent: string): void {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const fileName = `Ausbildungsmatrix_${this.jahrFilter.value || 'Alle'}.csv`;
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
     link.style.visibility = 'hidden';
     
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   }
+
 
   /**
    * Zeigt eine Snackbar-Benachrichtigung an
@@ -356,23 +484,25 @@ export class AusbildungsmatrixComponent implements OnInit {
     this.snackBar.open(message, 'Schließen', {
       duration: 3000,
       horizontalPosition: 'center',
-      verticalPosition: 'bottom'
+      verticalPosition: 'bottom',
     });
   }
+
 
   /**
    * Gibt den Titel einer Ausbildung zurück
    */
   getAusbildungTitel(ausbildungId: string): string {
-    const ausbildung = this.ausbildungen().find(a => a.id === ausbildungId);
+    const ausbildung = this.ausbildungen().find((a) => a.id === ausbildungId);
     return ausbildung ? ausbildung.titel : '';
   }
+
 
   /**
    * Gibt den Typ einer Ausbildung zurück
    */
   getAusbildungTyp(ausbildungId: string): string {
-    const ausbildung = this.ausbildungen().find(a => a.id === ausbildungId);
+    const ausbildung = this.ausbildungen().find((a) => a.id === ausbildungId);
     return ausbildung ? ausbildung.typ : '';
   }
 }

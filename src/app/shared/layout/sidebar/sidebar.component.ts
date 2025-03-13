@@ -174,6 +174,7 @@ export class SidebarComponent {
     
     return this.authService.hasRole(item.requiredRoles as any[]);
   }
+
   
   /**
    * Prüft, ob ein Untermenüeintrag für die aktuelle Benutzerrolle sichtbar sein soll
@@ -187,6 +188,7 @@ export class SidebarComponent {
     
     return parentItem.children.some(child => this.hasRequiredRole(child));
   }
+
   
   /**
    * Prüft, ob ein Navigationseintrag aktiv ist
@@ -200,6 +202,7 @@ export class SidebarComponent {
     return this.activePath === route || 
            (route !== '/' && this.activePath.startsWith(route));
   }
+  
   
   /**
    * Prüft, ob ein Menüeintrag erweitert sein soll

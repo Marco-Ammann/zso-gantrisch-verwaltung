@@ -47,5 +47,5 @@ export const AUSBILDUNGEN_ROUTES: Routes = [
       .then(m => m.AusbildungsmatrixComponent),
     title: 'Ausbildungsmatrix - ZSO Gantrisch',
     canActivate: [authGuard]
-  }
+  },
 ];
