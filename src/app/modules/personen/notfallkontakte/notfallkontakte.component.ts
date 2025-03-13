@@ -7,11 +7,9 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatPaginatorModule } from '@angular/material/paginator';
-import { MatSortModule } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { NotfallkontaktService } from '../../../core/services/notfallkontakt.service';
 import { PersonService } from '../../../core/services/person.service';
@@ -22,7 +20,7 @@ import { Person } from '../../../core/models/person.model';
 
 import { KontaktDialogComponent } from './kontakt-dialog/kontakt-dialog.component';
 import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog/confirm-dialog.component';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatPaginatorModule } from '@angular/material/paginator';
 
 @Component({
   selector: 'app-notfallkontakte',
@@ -35,12 +33,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    MatChipsModule,
-    MatPaginatorModule,
-    MatSortModule,
     MatDialogModule,
     MatSnackBarModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatPaginatorModule
   ],
   templateUrl: './notfallkontakte.component.html',
   styleUrls: ['./notfallkontakte.component.scss']
@@ -67,7 +63,7 @@ export class NotfallkontakteComponent implements OnInit {
   dataSource = new MatTableDataSource<Notfallkontakt>([]);
   
   // Ladezustand
-  isLoading = false;
+  isLoading = true;
   
   ngOnInit(): void {
     this.loadData();
@@ -81,39 +77,38 @@ export class NotfallkontakteComponent implements OnInit {
     console.log('Lade Notfallkontakte-Daten...');
     
     try {
-      // Zuerst Personen laden
-      console.log('Lade Personen...');
+      // Personen laden
       await this.personService.loadPersonen();
       this.personen = this.personService.personen();
       console.log(`${this.personen.length} Personen geladen`);
       
-      // Personen-Map erstellen für schnellen Zugriff
+      // Personen-Map erstellen
       this.personMap.clear();
       this.personen.forEach(person => {
         this.personMap.set(person.id, person);
       });
       
-      // Dann Notfallkontakte laden
-      console.log('Lade Notfallkontakte...');
-      try {
-        await this.kontaktService.loadNotfallkontakte();
-        this.notfallkontakte = this.kontaktService.notfallkontakte();
-        console.log(`${this.notfallkontakte.length} Notfallkontakte geladen`);
-        
-        // Datenquelle direkt aktualisieren
-        this.dataSource.data = this.notfallkontakte;
-      } catch (kontaktError) {
-        console.error('Fehler beim Laden der Notfallkontakte:', kontaktError);
-        this.showSnackBar('Fehler beim Laden der Notfallkontakte');
-        this.notfallkontakte = [];
-        this.dataSource.data = [];
+      // Wenn keine Personen vorhanden sind
+      if (this.personen.length === 0) {
+        this.showSnackBar('Keine Personen in der Datenbank gefunden');
+        return;
       }
+      
+      // Notfallkontakte laden
+      await this.kontaktService.loadNotfallkontakte();
+      this.notfallkontakte = this.kontaktService.notfallkontakte();
+      console.log(`${this.notfallkontakte.length} Notfallkontakte geladen`);
+      
+      // Datenquelle aktualisieren
+      this.dataSource.data = this.notfallkontakte.map(kontakt => ({
+        ...kontakt,
+        personName: this.getPersonName(kontakt.personId)
+      }));
     } catch (error) {
       console.error('Fehler beim Laden der Daten:', error);
       this.showSnackBar('Fehler beim Laden der Daten');
     } finally {
       this.isLoading = false;
-      console.log('Laden der Daten abgeschlossen');
     }
   }
   
@@ -187,13 +182,6 @@ export class NotfallkontakteComponent implements OnInit {
   }
   
   /**
-   * Navigiert zur Detailansicht einer Person
-   */
-  navigateToPerson(personId: string): void {
-    this.router.navigate(['/personen', personId]);
-  }
-  
-  /**
    * Gibt den Namen einer Person anhand der ID zurück
    */
   getPersonName(personId: string): string {
@@ -220,4 +208,13 @@ export class NotfallkontakteComponent implements OnInit {
       verticalPosition: 'bottom'
     });
   }
+
+    /**
+   * Navigiert zur Detailseite einer Person
+   */
+    navigateToPerson(personId: string): void {
+      if (personId) {
+        this.router.navigate(['/personen', personId]);
+      }
+    }
 }

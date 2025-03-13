@@ -2,7 +2,14 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { 
+  FormBuilder, 
+  FormGroup, 
+  Validators, 
+  ReactiveFormsModule 
+} from '@angular/forms';
+
+// Material Imports
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -10,11 +17,22 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { 
+  DateAdapter, 
+  MAT_DATE_FORMATS, 
+  MAT_DATE_LOCALE 
+} from '@angular/material/core';
 
 import { AusbildungService } from '../../../core/services/ausbildung.service';
 import { Ausbildung } from '../../../core/models/ausbildung.model';
+import { 
+  CustomDateAdapter, 
+  CUSTOM_DATE_FORMATS 
+} from '../../../core/utils/custom-date-adapter';
 
 @Component({
   selector: 'app-ausbildung-form',
@@ -29,8 +47,19 @@ import { Ausbildung } from '../../../core/models/ausbildung.model';
     MatButtonModule,
     MatIconModule,
     MatCheckboxModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
     MatProgressSpinnerModule,
     MatSnackBarModule
+  ],
+  providers: [
+    { provide: MAT_DATE_LOCALE, useValue: 'de-CH' },
+    { 
+      provide: DateAdapter, 
+      useClass: CustomDateAdapter, 
+      deps: [MAT_DATE_LOCALE] 
+    },
+    { provide: MAT_DATE_FORMATS, useValue: CUSTOM_DATE_FORMATS }
   ],
   templateUrl: './ausbildung-form.component.html',
   styleUrls: ['./ausbildung-form.component.scss']
@@ -55,11 +84,11 @@ export class AusbildungFormComponent implements OnInit {
 
   // Optionen für Ausbildungstyp
   typOptions = [
-    { value: 'WK', label: 'WK' },
-    { value: 'LG', label: 'LG' },
-    { value: 'KVK', label: 'KVK' },
+    { value: 'WK', label: 'Wiederholungskurs' },
+    { value: 'LG', label: 'Lehrgang' },
+    { value: 'KVK', label: 'Kadervorbereitung' },
     { value: 'Übung', label: 'Übung' },
-    { value: 'Kurs', label: 'Kurs' }
+    { value: 'Sitzung', label: 'Sitzung' }
   ];
 
   constructor() {
@@ -83,13 +112,63 @@ export class AusbildungFormComponent implements OnInit {
    * Erstellt die Formularstruktur
    */
   private createAusbildungForm(): FormGroup {
+    const currentYear = new Date().getFullYear();
     return this.fb.group({
       titel: ['', [Validators.required]],
       beschreibung: [''],
       typ: ['WK', [Validators.required]],
-      jahr: [new Date().getFullYear(), [Validators.required, Validators.min(2000), Validators.max(2100)]],
+      
+      // Erweitertes Datumshandling
+      startDatum: [null, [Validators.required]],
+      endDatum: [null],
+      
+      // Optionale Einrückzeiten für Kader und Soldaten
+      einrueckZeitKader: this.fb.group({
+        start: [null],
+        ende: [null]
+      }),
+      einrueckZeitSoldaten: this.fb.group({
+        start: [null],
+        ende: [null]
+      }),
+      
+      // Bestehende Felder
+      jahr: [currentYear, [
+        Validators.required, 
+        Validators.min(2000), 
+        Validators.max(2100)
+      ]],
       erforderlich: [true, [Validators.required]]
-    });
+    }, { validators: this.datumValidator });
+  }
+
+  /**
+   * Benutzerdefinierter Validator für Datumsprüfungen
+   */
+  private datumValidator(group: FormGroup) {
+    const startDatum = group.get('startDatum')?.value;
+    const endDatum = group.get('endDatum')?.value;
+    const kaderStart = group.get('einrueckZeitKader.start')?.value;
+    const kaderEnde = group.get('einrueckZeitKader.ende')?.value;
+    const soldatenStart = group.get('einrueckZeitSoldaten.start')?.value;
+    const soldatenEnde = group.get('einrueckZeitSoldaten.ende')?.value;
+
+    // Prüfen, dass Enddatum nach Startdatum liegt
+    if (startDatum && endDatum && startDatum > endDatum) {
+      return { 'datumReihenfolge': true };
+    }
+
+    // Prüfen, dass Kader-Einrückzeiten korrekt sind
+    if (kaderStart && kaderEnde && kaderStart > kaderEnde) {
+      return { 'kaderDatumReihenfolge': true };
+    }
+
+    // Prüfen, dass Soldaten-Einrückzeiten korrekt sind
+    if (soldatenStart && soldatenEnde && soldatenStart > soldatenEnde) {
+      return { 'soldatenDatumReihenfolge': true };
+    }
+
+    return null;
   }
 
   /**
@@ -102,10 +181,21 @@ export class AusbildungFormComponent implements OnInit {
       const ausbildung = await this.ausbildungService.getAusbildungById(id);
 
       if (ausbildung) {
+        // Formular mit den Daten der Ausbildung befüllen
         this.ausbildungForm.patchValue({
           titel: ausbildung.titel,
           beschreibung: ausbildung.beschreibung || '',
           typ: ausbildung.typ,
+          startDatum: ausbildung.startDatum || null,
+          endDatum: ausbildung.endDatum || null,
+          einrueckZeitKader: {
+            start: ausbildung.einrueckZeitKader?.start || null,
+            ende: ausbildung.einrueckZeitKader?.ende || null
+          },
+          einrueckZeitSoldaten: {
+            start: ausbildung.einrueckZeitSoldaten?.start || null,
+            ende: ausbildung.einrueckZeitSoldaten?.ende || null
+          },
           jahr: ausbildung.jahr,
           erforderlich: ausbildung.erforderlich
         });
@@ -127,7 +217,7 @@ export class AusbildungFormComponent implements OnInit {
   async saveAusbildung(): Promise<void> {
     if (this.ausbildungForm.invalid) {
       this.markFormGroupTouched(this.ausbildungForm);
-      this.showSnackBar('Bitte füllen Sie alle erforderlichen Felder aus');
+      this.showSnackBar('Bitte überprüfen Sie die Eingaben');
       return;
     }
 
@@ -136,14 +226,27 @@ export class AusbildungFormComponent implements OnInit {
     try {
       const formValue = this.ausbildungForm.value;
 
+      // Stelle sicher, dass nur gültige Daten gespeichert werden
+      const ausbildungData: Ausbildung = {
+        titel: formValue.titel,
+        beschreibung: formValue.beschreibung,
+        typ: formValue.typ,
+        startDatum: formValue.startDatum,
+        endDatum: formValue.endDatum,
+        einrueckZeitKader: formValue.einrueckZeitKader.start ? formValue.einrueckZeitKader : undefined,
+        einrueckZeitSoldaten: formValue.einrueckZeitSoldaten.start ? formValue.einrueckZeitSoldaten : undefined,
+        jahr: formValue.startDatum ? new Date(formValue.startDatum).getFullYear() : formValue.jahr,
+        erforderlich: formValue.erforderlich
+      } as Ausbildung;
+
       if (this.isEditMode && this.ausbildungId) {
         // Bestehende Ausbildung aktualisieren
-        await this.ausbildungService.updateAusbildung(this.ausbildungId, formValue);
+        await this.ausbildungService.updateAusbildung(this.ausbildungId, ausbildungData);
         this.showSnackBar('Ausbildung erfolgreich aktualisiert');
         this.router.navigate(['/ausbildungen', this.ausbildungId]);
       } else {
         // Neue Ausbildung erstellen
-        const newId = await this.ausbildungService.createAusbildung(formValue);
+        const newId = await this.ausbildungService.createAusbildung(ausbildungData);
         this.showSnackBar('Ausbildung erfolgreich erstellt');
         this.router.navigate(['/ausbildungen', newId]);
       }
@@ -156,18 +259,7 @@ export class AusbildungFormComponent implements OnInit {
   }
 
   /**
-   * Abbrechen und zurück navigieren
-   */
-  cancel(): void {
-    if (this.isEditMode && this.ausbildungId) {
-      this.router.navigate(['/ausbildungen', this.ausbildungId]);
-    } else {
-      this.router.navigate(['/ausbildungen']);
-    }
-  }
-
-  /**
-   * Formular-Feld-Fehler prüfen
+   * Prüft, ob ein Formularfeld einen Fehler hat
    */
   hasError(controlName: string, errorCode: string): boolean {
     const control = this.ausbildungForm.get(controlName);
@@ -175,7 +267,7 @@ export class AusbildungFormComponent implements OnInit {
   }
 
   /**
-   * Markiert alle Formularfelder als berührt, um Validierungen anzuzeigen
+   * Markiert alle Formularfelder als berührt
    */
   private markFormGroupTouched(formGroup: FormGroup): void {
     Object.values(formGroup.controls).forEach(control => {
@@ -185,6 +277,17 @@ export class AusbildungFormComponent implements OnInit {
         this.markFormGroupTouched(control);
       }
     });
+  }
+
+  /**
+   * Abbrechen und zurück navigieren
+   */
+  cancel(): void {
+    if (this.isEditMode && this.ausbildungId) {
+      this.router.navigate(['/ausbildungen', this.ausbildungId]);
+    } else {
+      this.router.navigate(['/ausbildungen']);
+    }
   }
 
   /**

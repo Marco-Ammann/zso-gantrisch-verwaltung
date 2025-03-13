@@ -50,21 +50,22 @@ export class PersonDetailComponent implements OnInit {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
 
-  // Benutzerberechtigungen
-  canEdit = this.authService.canEdit;
-  canDelete = this.authService.canDelete;
+ // Benutzerberechtigungen
+ canEdit = this.authService.canEdit;
+ canDelete = this.authService.canDelete;
 
-  // Person-ID aus der Route
-  personId: string | null = null;
+ // Person-ID aus der Route
+ personId: string | null = null;
+
 
   // Aktuelle Person
   person: Person | null = null;
+
 
   // Ladeindikator
   isLoading = false;
 
   ngOnInit(): void {
-    // Klare Anzeige des Ladezustands
     this.isLoading = true;
 
     this.route.paramMap.subscribe((params) => {
@@ -80,6 +81,7 @@ export class PersonDetailComponent implements OnInit {
       }
     });
   }
+
 
   /**
    * Lädt Person-Details
@@ -168,34 +170,52 @@ export class PersonDetailComponent implements OnInit {
   /**
    * Formatiert ein Datum für die Anzeige
    */
+  // Datum-Formatierungsmethoden mit robuster Fehlerbehandlung
   formatDate(date: Date | string | any): string {
     if (!date) return '-';
     
     try {
-      // Wenn date ein Firestore Timestamp ist
+      // Firestore Timestamp
       if (date && typeof date.toDate === 'function') {
-        return date.toDate().toLocaleDateString('de-CH');
+        return this.formatFirestoreTimestamp(date);
       }
-      // Wenn date ein Date-Objekt oder ein String ist
-      return new Date(date).toLocaleDateString('de-CH');
+      
+      // Date-Objekt oder Datumsstring
+      const parsedDate = new Date(date);
+      
+      // Prüfe, ob das Datum gültig ist
+      if (isNaN(parsedDate.getTime())) {
+        return '-';
+      }
+      
+      return parsedDate.toLocaleDateString('de-CH', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
     } catch (error) {
       console.error('Fehler bei der Datumsformatierung:', error);
       return '-';
     }
   }
 
-  formatFirestoreTimestamp(date: any): string {
-    if (!date) return '-';
+  /**
+   * Formatiert Firestore Timestamps speziell
+   */
+  formatFirestoreTimestamp(timestamp: any): string {
+    if (!timestamp || typeof timestamp.toDate !== 'function') {
+      return '-';
+    }
     
     try {
-      // Wenn date ein Firestore Timestamp ist (hat eine toDate-Methode)
-      if (date && typeof date.toDate === 'function') {
-        return date.toDate().toLocaleDateString('de-CH');
-      }
-      // Wenn date ein Date-Objekt oder ein String ist
-      return new Date(date).toLocaleDateString('de-CH');
+      const date = timestamp.toDate();
+      return date.toLocaleDateString('de-CH', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
     } catch (error) {
-      console.error('Fehler bei der Datumsformatierung:', error);
+      console.error('Fehler bei Firestore Timestamp:', error);
       return '-';
     }
   }
