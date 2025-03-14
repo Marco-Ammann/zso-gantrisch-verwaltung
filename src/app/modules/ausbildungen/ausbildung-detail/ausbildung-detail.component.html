@@ -61,6 +61,11 @@
                 <mat-icon>assignment_turned_in</mat-icon>
                 Teilnahmen erfassen
               </button>
+
+              <button mat-raised-button color="primary" (click)="generatePdfsForAllParticipants()">
+                <mat-icon>picture_as_pdf</mat-icon>
+                Kontaktdatenblätter generieren
+              </button>
               
               @if (canEdit()) {
                 <button mat-raised-button color="accent" (click)="editAusbildung()">

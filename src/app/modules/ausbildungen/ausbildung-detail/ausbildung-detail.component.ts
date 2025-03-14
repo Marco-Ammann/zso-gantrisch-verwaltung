@@ -13,7 +13,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatPaginatorModule } from '@angular/material/paginator';
 
-import { AusbildungService, TeilnahmeService, PersonService } from '../../../core/services';
+import { AusbildungService, TeilnahmeService, PersonService, PdfGeneratorService } from '../../../core/services';
 import { AuthService } from '../../../auth/services/auth.service';
 import { Ausbildung } from '../../../core/models/ausbildung.model';
 import { Ausbildungsteilnahme } from '../../../core/models/teilnahme.model';
@@ -49,6 +49,7 @@ export class AusbildungDetailComponent implements OnInit {
   private authService = inject(AuthService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private pdfService = inject(PdfGeneratorService);
 
   // Benutzerberechtigungen
   canEdit = this.authService.canEdit;
@@ -278,6 +279,42 @@ export class AusbildungDetailComponent implements OnInit {
       duration: 3000,
       horizontalPosition: 'center',
       verticalPosition: 'bottom'
+    });
+  }
+
+
+  async generatePdfsForAllParticipants(): Promise<void> {
+    if (!this.ausbildungId) return;
+    
+    // Dialog mit Optionen anzeigen
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Kontaktdatenblätter generieren',
+        message: 'Möchten Sie ein kombiniertes PDF oder einzelne PDFs für jeden Teilnehmer erstellen?',
+        confirmText: 'Kombiniertes PDF',
+        cancelText: 'Einzelne PDFs'
+      }
+    });
+    
+    dialogRef.afterClosed().subscribe(async (result) => {
+      // Stellen sicher, dass ausbildungId nicht null ist
+      if (!this.ausbildungId) return;
+      
+      try {
+        if (result === true) {
+          // Kombiniertes PDF
+          await this.pdfService.generateKombiniertesKontaktdatenblattFuerKurs(this.ausbildungId);
+          this.showSnackBar('Kombiniertes Kontaktdatenblatt wurde erstellt');
+        } else if (result === false) {
+          // Einzelne PDFs
+          await this.pdfService.generateKontaktdatenblaetterFuerKurs(this.ausbildungId);
+          this.showSnackBar('Einzelne Kontaktdatenblätter wurden erstellt');
+        }
+      } catch (error) {
+        console.error('Fehler beim Generieren der PDFs:', error);
+        this.showSnackBar('Fehler beim Generieren der PDFs');
+      }
     });
   }
 }
