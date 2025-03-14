@@ -1,6 +1,4 @@
-// src/app/modules/ausbildungen/ausbildung-detail/ausbildung-detail.component.ts
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,12 +11,14 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatPaginatorModule } from '@angular/material/paginator';
 
-import { AusbildungService, TeilnahmeService, PersonService, PdfGeneratorService } from '../../../core/services';
+import { AusbildungService } from '../../../core/services/ausbildung.service';
+import { TeilnahmeService } from '../../../core/services/teilnahme.service';
+import { PersonService } from '../../../core/services/person.service';
+import { PdfGeneratorService } from '../../../core/services/pdf-generator.service';
 import { AuthService } from '../../../auth/services/auth.service';
-import { Ausbildung } from '../../../core/models/ausbildung.model';
-import { Ausbildungsteilnahme } from '../../../core/models/teilnahme.model';
-import { Person } from '../../../core/models/person.model';
 import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog/confirm-dialog.component';
+import { PdfProgressDialogComponent } from '../../../core/utils/pdf-progress-dialog.component';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-ausbildung-detail',
@@ -35,10 +35,10 @@ import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog/confir
     MatDialogModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
-    MatPaginatorModule
+    MatPaginatorModule,
   ],
   templateUrl: './ausbildung-detail.component.html',
-  styleUrls: ['./ausbildung-detail.component.scss']
+  styleUrls: ['./ausbildung-detail.component.scss'],
 })
 export class AusbildungDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
@@ -47,59 +47,58 @@ export class AusbildungDetailComponent implements OnInit {
   private teilnahmeService = inject(TeilnahmeService);
   private personService = inject(PersonService);
   private authService = inject(AuthService);
+  private pdfService = inject(PdfGeneratorService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
-  private pdfService = inject(PdfGeneratorService);
 
-  // Benutzerberechtigungen
+  ausbildung = signal<any>(null);
+  teilnahmen = signal<any[]>([]);
+  personen = signal<any[]>([]);
+  isLoading = signal(true);
+  loadingTeilnahmen = signal(false);
+  ausbildungId: string | null = null;
+
+  displayedColumns: string[] = [
+    'person',
+    'datum',
+    'status',
+    'bemerkung',
+    'aktionen',
+  ];
+  dataSource = computed(() => {
+    return this.teilnahmen().map((teilnahme) => {
+      const person = this.personen().find((p) => p.id === teilnahme.personId);
+      return {
+        ...teilnahme,
+        personName: person
+          ? `${person.grunddaten.grad} ${person.grunddaten.nachname} ${person.grunddaten.vorname}`
+          : 'Unbekannt',
+      };
+    });
+  });
+
   canEdit = this.authService.canEdit;
   canDelete = this.authService.canDelete;
 
-   // Zustände
-   ausbildung = signal<Ausbildung | null>(null);
-   teilnahmen = signal<Ausbildungsteilnahme[]>([]);
-   personen = signal<Person[]>([]);
-   isLoading = signal(true);
-   loadingTeilnahmen = signal(false);
- 
-   // ID der Ausbildung
-   ausbildungId: string | null = null;
-
-  // Tabellenkonfiguration für Teilnahmen
-  displayedColumns: string[] = ['person', 'datum', 'status', 'bemerkung', 'aktionen'];
-  dataSource: any[] = [];
-
   ngOnInit(): void {
-    console.log('AusbildungDetailComponent initialisiert');
-    this.route.paramMap.subscribe(params => {
-      console.log('Route-Parameter:', params);
+    this.route.paramMap.subscribe(async (params) => {
       const id = params.get('id');
-      console.log('Ausbildungs-ID aus Route:', id);
-      
       if (id) {
         this.ausbildungId = id;
-        this.loadAusbildung(id);
-        this.loadTeilnahmen(id);
+        await this.loadAusbildung(id);
+        await this.loadTeilnahmen(id);
       } else {
-        console.error('Keine Ausbildungs-ID in den Routenparametern gefunden');
         this.showSnackBar('Keine Ausbildungs-ID gefunden');
         this.router.navigate(['/ausbildungen']);
       }
     });
   }
 
-  /**
-   * Lädt die Ausbildungsdetails
-   */
   async loadAusbildung(id: string): Promise<void> {
     this.isLoading.set(true);
     try {
-      console.log('Lade Ausbildung mit ID:', id);
       const ausbildung = await this.ausbildungService.getAusbildungById(id);
-      console.log('Geladene Ausbildung:', ausbildung);
-      
       this.ausbildung.set(ausbildung);
-      
       if (!ausbildung) {
         this.showSnackBar('Ausbildung nicht gefunden');
         this.router.navigate(['/ausbildungen']);
@@ -112,24 +111,21 @@ export class AusbildungDetailComponent implements OnInit {
     }
   }
 
-  /**
-   * Lädt die Teilnahmen für diese Ausbildung
-   */
+  goBack(): void {
+    this.router.navigate(['/ausbildungen']);
+  }
+
   async loadTeilnahmen(ausbildungId: string): Promise<void> {
     this.loadingTeilnahmen.set(true);
     try {
-      // Personen laden
       if (this.personen().length === 0) {
         await this.personService.loadPersonen();
         this.personen.set(this.personService.personen());
       }
-
-      // Teilnahmen für diese Ausbildung laden
-      const teilnahmen = await this.teilnahmeService.getTeilnahmenByAusbildung(ausbildungId);
+      const teilnahmen = await this.teilnahmeService.getTeilnahmenByAusbildung(
+        ausbildungId
+      );
       this.teilnahmen.set(teilnahmen);
-      
-      // Datenquelle für die Tabelle vorbereiten
-      this.updateDataSource();
     } catch (error) {
       console.error('Fehler beim Laden der Teilnahmen:', error);
       this.showSnackBar('Fehler beim Laden der Teilnahmen');
@@ -138,45 +134,24 @@ export class AusbildungDetailComponent implements OnInit {
     }
   }
 
-  /**
-   * Bereitet die Datenquelle für die Teilnahmen-Tabelle vor
-   */
-  private updateDataSource(): void {
-    this.dataSource = this.teilnahmen().map(teilnahme => {
-      const person = this.personen().find(p => p.id === teilnahme.personId);
-      return {
-        ...teilnahme,
-        personName: person ? `${person.grunddaten.grad} ${person.grunddaten.nachname} ${person.grunddaten.vorname}` : 'Unbekannt'
-      };
-    });
-  }
-
-  /**
-   * Navigiert zur Bearbeitungsseite
-   */
   editAusbildung(): void {
     if (this.ausbildungId) {
       this.router.navigate(['/ausbildungen', this.ausbildungId, 'bearbeiten']);
     }
   }
 
-  /**
-   * Löscht die Ausbildung mit Bestätigungsdialog
-   */
   deleteAusbildung(): void {
-    const currentAusbildung = this.ausbildung();
-    if (!currentAusbildung) return;
-
+    const current = this.ausbildung();
+    if (!current) return;
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
       data: {
         title: 'Ausbildung löschen',
-        message: `Möchten Sie die Ausbildung "${currentAusbildung.titel}" wirklich löschen?`,
+        message: `Möchten Sie die Ausbildung "${current.titel}" wirklich löschen?`,
         confirmText: 'Löschen',
-        cancelText: 'Abbrechen'
-      }
+        cancelText: 'Abbrechen',
+      },
     });
-
     dialogRef.afterClosed().subscribe(async (result) => {
       if (result && this.ausbildungId) {
         try {
@@ -191,39 +166,28 @@ export class AusbildungDetailComponent implements OnInit {
     });
   }
 
-  /**
-   * Zur Teilnahmeerfassung navigieren
-   */
   erfasseTeilnahme(): void {
     if (this.ausbildungId) {
       this.router.navigate(['/ausbildungen/teilnahmen', this.ausbildungId]);
     }
   }
 
-  /**
-   * Teilnahme löschen mit Bestätigungsdialog
-   */
-  deleteTeilnahme(teilnahme: Ausbildungsteilnahme & { personName: string }): void {
+  deleteTeilnahme(teilnahme: any): void {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
       data: {
         title: 'Teilnahme löschen',
         message: `Möchten Sie die Teilnahme von ${teilnahme.personName} wirklich löschen?`,
         confirmText: 'Löschen',
-        cancelText: 'Abbrechen'
-      }
+        cancelText: 'Abbrechen',
+      },
     });
-
     dialogRef.afterClosed().subscribe(async (result) => {
-      if (result) {
+      if (result && this.ausbildungId) {
         try {
           await this.teilnahmeService.deleteTeilnahme(teilnahme.id);
           this.showSnackBar('Teilnahme erfolgreich gelöscht');
-          
-          // Daten aktualisieren
-          if (this.ausbildungId) {
-            this.loadTeilnahmen(this.ausbildungId);
-          }
+          await this.loadTeilnahmen(this.ausbildungId);
         } catch (error) {
           console.error('Fehler beim Löschen der Teilnahme:', error);
           this.showSnackBar('Fehler beim Löschen der Teilnahme');
@@ -232,38 +196,46 @@ export class AusbildungDetailComponent implements OnInit {
     });
   }
 
-  /**
-   * Zurück zur Ausbildungsübersicht
-   */
-  goBack(): void {
-    this.router.navigate(['/ausbildungen']);
+  async generatePdfsForAllParticipants(): Promise<void> {
+    if (!this.ausbildungId) return;
+    const dialogRef = this.dialog.open(PdfProgressDialogComponent, {
+      disableClose: true,
+      panelClass: 'pdf-progress-dialog',
+    });
+    try {
+      await this.pdfService.generateKombiniertesKontaktdatenblattFuerKurs(
+        this.ausbildungId,
+        (progress: number, status: string) => {
+          const instance =
+            dialogRef.componentInstance as PdfProgressDialogComponent;
+          instance.progress = progress;
+          instance.status = status;
+        }
+      );
+      this.showSnackBar('PDF erfolgreich erstellt');
+    } catch (error) {
+      console.error('Fehler beim Generieren der PDFs:', error);
+      this.showSnackBar('Fehler beim Generieren der PDFs');
+    } finally {
+      dialogRef.close();
+    }
   }
 
-  /**
-   * Statustext formatieren
-   */
   formatStatus(status: string): string {
-    const statusMap: Record<string, string> = {
-      'teilgenommen': 'Teilgenommen',
+    const map: Record<string, string> = {
+      teilgenommen: 'Teilgenommen',
       'nicht teilgenommen': 'Nicht teilgenommen',
-      'dispensiert': 'Dispensiert'
+      dispensiert: 'Dispensiert',
     };
-    
-    return statusMap[status] || status;
+    return map[status] || status;
   }
 
-  /**
-   * Datum formatieren
-   */
   formatDate(date: any): string {
     if (!date) return '-';
-    
     try {
-      // Wenn date ein Firestore Timestamp ist
       if (date && typeof date.toDate === 'function') {
         return date.toDate().toLocaleDateString('de-CH');
       }
-      // Wenn date ein Date-Objekt oder ein String ist
       return new Date(date).toLocaleDateString('de-CH');
     } catch (error) {
       console.error('Fehler bei der Datumsformatierung:', error);
@@ -271,50 +243,11 @@ export class AusbildungDetailComponent implements OnInit {
     }
   }
 
-  /**
-   * Zeigt eine Snackbar-Benachrichtigung an
-   */
   private showSnackBar(message: string): void {
     this.snackBar.open(message, 'Schließen', {
       duration: 3000,
       horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
-  }
-
-
-  async generatePdfsForAllParticipants(): Promise<void> {
-    if (!this.ausbildungId) return;
-    
-    // Dialog mit Optionen anzeigen
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      width: '400px',
-      data: {
-        title: 'Kontaktdatenblätter generieren',
-        message: 'Möchten Sie ein kombiniertes PDF oder einzelne PDFs für jeden Teilnehmer erstellen?',
-        confirmText: 'Kombiniertes PDF',
-        cancelText: 'Einzelne PDFs'
-      }
-    });
-    
-    dialogRef.afterClosed().subscribe(async (result) => {
-      // Stellen sicher, dass ausbildungId nicht null ist
-      if (!this.ausbildungId) return;
-      
-      try {
-        if (result === true) {
-          // Kombiniertes PDF
-          await this.pdfService.generateKombiniertesKontaktdatenblattFuerKurs(this.ausbildungId);
-          this.showSnackBar('Kombiniertes Kontaktdatenblatt wurde erstellt');
-        } else if (result === false) {
-          // Einzelne PDFs
-          await this.pdfService.generateKontaktdatenblaetterFuerKurs(this.ausbildungId);
-          this.showSnackBar('Einzelne Kontaktdatenblätter wurden erstellt');
-        }
-      } catch (error) {
-        console.error('Fehler beim Generieren der PDFs:', error);
-        this.showSnackBar('Fehler beim Generieren der PDFs');
-      }
+      verticalPosition: 'bottom',
     });
   }
 }

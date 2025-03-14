@@ -14,7 +14,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSelectModule } from '@angular/material/select';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { SelectionModel } from '@angular/cdk/collections';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { AusbildungService, PersonService, TeilnahmeService } from '../../../core/services';
 import { Ausbildung, Person, Ausbildungsteilnahme } from '../../../core/models';
@@ -35,7 +37,9 @@ import { Ausbildung, Person, Ausbildungsteilnahme } from '../../../core/models';
     MatIconModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
-    MatSelectModule
+    MatSelectModule,
+    MatButtonToggleModule,
+    MatTooltipModule
   ],
   templateUrl: './teilnahme-erfassung.component.html',
   styleUrls: ['./teilnahme-erfassung.component.scss']
@@ -62,10 +66,21 @@ export class TeilnahmeErfassungComponent implements OnInit {
   // Form
   teilnahmeForm: FormGroup;
 
-  // Table data
-  displayedColumns: string[] = ['select', 'grad', 'name', 'funktion', 'zug'];
+  // Neue Form Controls für Suche, Filter und Datum
+  searchControl = new FormControl('');
+  statusFilterControl = new FormControl('alle');
+  datumControl = new FormControl(new Date(), Validators.required);
+
+  // Teilnehmerliste
+  teilnehmer: Person[] = [];
+  
+  // Table data - Removed duplicate declarations
+  displayedColumns: string[] = ['select', 'grad', 'name', 'einteilung', 'status', 'bemerkung', 'aktionen'];
   dataSource = new MatTableDataSource<Person>([]);
   selection = new SelectionModel<Person>(true, []);
+  
+  // IDs der hervorgehobenen Personen
+  highlightedPersonIds: string[] = [];
   
   // Statusoptionen
   statusOptions = [
@@ -93,6 +108,15 @@ export class TeilnahmeErfassungComponent implements OnInit {
         this.router.navigate(['/ausbildungen']);
       }
     });
+
+    // Set up initial filter behavior
+    this.searchControl.valueChanges.subscribe(() => {
+      this.dataSource.data = this.filteredTeilnehmer();
+    });
+
+    this.statusFilterControl.valueChanges.subscribe(() => {
+      this.dataSource.data = this.filteredTeilnehmer();
+    });
   }
 
   /**
@@ -114,14 +138,16 @@ export class TeilnahmeErfassungComponent implements OnInit {
       
       // Personen laden
       await this.personService.loadPersonen();
-      this.personen.set(this.personService.personen().filter(p => p.zivilschutz.status === 'aktiv'));
+      const aktivPersonen = this.personService.personen().filter(p => p.zivilschutz?.status === 'aktiv');
+      this.personen.set(aktivPersonen);
+      this.teilnehmer = aktivPersonen;
       
       // Bestehende Teilnahmen für diese Ausbildung laden
       const teilnahmen = await this.teilnahmeService.getTeilnahmenByAusbildung(ausbildungId);
       this.teilnahmen.set(teilnahmen);
       
       // Datentabelle vorbereiten
-      this.dataSource.data = this.personen();
+      this.dataSource.data = this.teilnehmer;
       
       // Vorauswahl basierend auf bestehenden Teilnahmen
       this.vorauswählen(teilnahmen);
@@ -260,5 +286,132 @@ export class TeilnahmeErfassungComponent implements OnInit {
       horizontalPosition: 'center',
       verticalPosition: 'bottom'
     });
+  }
+
+  /**
+   * Berechnet die Teilnehmerzahl pro Status
+   * Status-Mapping: 'teilgenommen' = anwesend, 'dispensiert' = entschuldigt, 'nicht teilgenommen' = abwesend
+   */
+  getCountByStatus(status: string): number {
+    // Fix: Use teilnahmen() to get the array first, then filter
+    const teilnahmenArray = this.teilnahmen();
+    
+    if (status === 'anwesend') {
+      return teilnahmenArray.filter((t: Ausbildungsteilnahme) => t.status === 'teilgenommen').length;
+    } else if (status === 'entschuldigt') {
+      return teilnahmenArray.filter((t: Ausbildungsteilnahme) => t.status === 'dispensiert').length;
+    } else if (status === 'abwesend') {
+      return teilnahmenArray.filter((t: Ausbildungsteilnahme) => t.status === 'nicht teilgenommen').length;
+    }
+    return 0;
+  }
+
+  /**
+   * Filtert Teilnehmer basierend auf Suche und Status-Filter
+   */
+  filteredTeilnehmer(): Person[] {
+    // Start with all persons
+    let filteredPersons = [...this.teilnehmer];
+    
+    // Apply search filter if there's a search term
+    const searchTerm = this.searchControl.value?.toLowerCase() || '';
+    if (searchTerm) {
+      filteredPersons = filteredPersons.filter(p => 
+        p.grunddaten?.nachname?.toLowerCase().includes(searchTerm) ||
+        p.grunddaten?.vorname?.toLowerCase().includes(searchTerm) ||
+        p.grunddaten?.grad?.toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    // Apply status filter if not "alle"
+    const statusFilter = this.statusFilterControl.value;
+    if (statusFilter && statusFilter !== 'alle') {
+      const teilnahmenByPerson = new Map<string, string>();
+      
+      // Map person IDs to their status
+      this.teilnahmen().forEach(t => {
+        let status: string;
+        if (t.status === 'teilgenommen') status = 'anwesend';
+        else if (t.status === 'dispensiert') status = 'entschuldigt';
+        else if (t.status === 'nicht teilgenommen') status = 'abwesend';
+        else status = 'unbearbeitet';
+        
+        teilnahmenByPerson.set(t.personId, status);
+      });
+      
+      // Filter persons by their status
+      filteredPersons = filteredPersons.filter(p => {
+        const status = teilnahmenByPerson.get(p.id);
+        if (statusFilter === 'unbearbeitet') {
+          return !status; // No teilnahme record = unbearbeitet
+        }
+        return status === statusFilter;
+      });
+    }
+    
+    return filteredPersons;
+  }
+
+  /**
+   * Setzt alle Filtereinstellungen zurück
+   */
+  resetFilters(): void {
+    this.searchControl.setValue('');
+    this.statusFilterControl.setValue('alle');
+  }
+
+  /**
+   * Öffnet einen Dialog zum Hinzufügen von Personen zur Ausbildung
+   */
+  openAddPersonDialog(): void {
+    console.log('openAddPersonDialog triggered');
+    // Dialog-Logik hier später implementieren
+    this.showSnackBar('Funktion noch nicht implementiert');
+  }
+
+  /**
+   * Aktualisiert den Status eines einzelnen Teilnehmers
+   */
+  updateStatus(person: Person, newStatus: string): void {
+    console.log('updateStatus', person, newStatus);
+    
+    // Status für Person updaten (später mit echter Service-Implementation ersetzen)
+    this.showSnackBar(`Status für ${person.grunddaten?.nachname} aktualisiert`);
+  }
+
+  /**
+   * Aktualisiert die Bemerkung eines Teilnehmers
+   */
+  updateBemerkung(person: Person, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const bemerkung = input.value;
+    
+    console.log('updateBemerkung', person, bemerkung);
+    
+    // Bemerkung für Person updaten (später mit echter Service-Implementation ersetzen)
+    if (bemerkung) {
+      this.showSnackBar(`Bemerkung für ${person.grunddaten?.nachname} aktualisiert`);
+    }
+  }
+
+  /**
+   * Entfernt einen Teilnehmer aus der Ausbildung
+   */
+  entfernePersonVonAusbildung(person: Person): void {
+    console.log('entfernePersonVonAusbildung', person);
+    
+    // Person aus Ausbildung entfernen (später mit echter Service-Implementation ersetzen)
+    this.showSnackBar(`${person.grunddaten?.nachname} wurde aus der Ausbildung entfernt`);
+  }
+
+  /**
+   * Updates status for all selected persons
+   */
+  updateStatusForSelected(newStatus: string): void {
+    console.log('updateStatusForSelected', newStatus, this.selection.selected);
+    
+    // Status für alle ausgewählten Personen aktualisieren
+    const count = this.selection.selected.length;
+    this.showSnackBar(`Status für ${count} Personen aktualisiert`);
   }
 }
