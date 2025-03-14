@@ -4,15 +4,36 @@
 @use './app/shared/styles/responsive.scss' as responsive;
 
 html {
+  color-scheme: light;
   @include mat.theme((
     color: (
-      theme-type: light,
       primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
+      tertiary: mat.$yellow-palette,
     ),
-    typography: Roboto,
+    typography: (
+      plain-family: Roboto,
+      brand-family: Open Sans,
+      bold-weight: 900,
+      medium-weight: 500,
+      regular-weight: 400,
+    ),
     density: 0,
    ));
+}
+
+palette {
+  $red-palette: ();
+  $green-palette: ();
+  $blue-palette: ();
+  $yellow-palette: ();
+  $cyan-palette: ();
+  $magenta-palette: ();
+  $orange-palette: ();
+  $chartreuse-palette: ();
+  $spring-green-palette: ();
+  $azure-palette: ();
+  $violet-palette: ();
+  $rose-palette: ();
 }
 
 /* Additional global responsive styles */

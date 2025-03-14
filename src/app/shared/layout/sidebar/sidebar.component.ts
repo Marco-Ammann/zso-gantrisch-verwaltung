@@ -1,16 +1,17 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService } from '../../../auth/services/auth.service';
 
-// Material Imports
+// Material Imports - Updated for Material 19.2
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatRippleModule } from '@angular/material/core';
 
 /**
  * Interface für Navigationseinträge
@@ -35,10 +36,11 @@ interface NavItem {
     MatExpansionModule,
     MatTooltipModule,
     MatBadgeModule,
-    MatDividerModule
+    MatDividerModule,
+    MatRippleModule
   ],
   templateUrl: './sidebar.component.html',
-  styleUrls: ['./sidebar.component.scss']
+  styleUrls: ['./sidebar.component.scss'],
 })
 export class SidebarComponent {
   private authService = inject(AuthService);
@@ -198,11 +200,14 @@ export class SidebarComponent {
   isActive(route?: string): boolean {
     if (!route) return false;
     
-    // Genauer Pfad-Vergleich oder Teilpfad für Unterseiten
-    return this.activePath === route || 
-           (route !== '/' && this.activePath.startsWith(route));
+    // For the root route, we need exact matching
+    if (route === '/') {
+      return this.activePath === '/';
+    }
+    
+    // For other routes, we check if the current path starts with the route
+    return this.activePath.startsWith(route);
   }
-  
   
   /**
    * Prüft, ob ein Menüeintrag erweitert sein soll

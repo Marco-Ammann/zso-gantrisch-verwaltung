@@ -1,71 +1,82 @@
 <div class="sidebar-container">
-  <div class="nav-list">
+  <mat-nav-list class="nav-list">
     <!-- Hauptmenüeinträge -->
-    @for (item of navItems; track item.label) { @if (hasRequiredRole(item)) {
-    <!-- Einfacher Menüeintrag ohne Untereinträge -->
-    @if (!item.children) {
-    <a
-      mat-list-item
-      [routerLink]="item.route"
-      [class.active]="isActive(item.route)"
-      class="nav-item"
-    >
-      <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
-      <span class="nav-label">{{ item.label }}</span>
-      @if (item.badge) {
-      <span
-        class="nav-badge"
-        matBadge="{{ item.badge }}"
-        matBadgeColor="warn"
-      ></span>
-      }
-    </a>
-    }
-    <!-- Menüeintrag mit Untereinträgen (Expansion Panel) -->
-    @else { @if (hasVisibleChildren(item)) {
-    <mat-expansion-panel class="nav-expansion" [expanded]="isExpanded(item)">
-      <mat-expansion-panel-header class="nav-expansion-header">
-        <mat-panel-title class="nav-expansion-title">
-          <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
-          <span class="nav-label">{{ item.label }}</span>
-          @if (item.badge) {
-          <span
-            class="nav-badge"
-            matBadge="{{ item.badge }}"
-            matBadgeColor="warn"
-          ></span>
-          }
-        </mat-panel-title>
-      </mat-expansion-panel-header>
-
-      <!-- Untermenüeinträge -->
-      @for (childItem of item.children; track childItem.label) { @if
-      (hasRequiredRole(childItem)) {
-      <a
-        mat-list-item
-        [routerLink]="childItem.route"
-        [class.active]="isActive(childItem.route)"
-        class="nav-child-item"
-      >
-        <mat-icon class="nav-child-icon">{{ childItem.icon }}</mat-icon>
-        <span class="nav-child-label">{{ childItem.label }}</span>
-        @if (childItem.badge) {
-        <span
-          class="nav-badge"
-          matBadge="{{ childItem.badge }}"
-          matBadgeColor="warn"
-        ></span>
+    @for (item of navItems; track item.label) { 
+      @if (hasRequiredRole(item)) {
+        <!-- Einfacher Menüeintrag ohne Untereinträge -->
+        @if (!item.children) {
+          <a mat-list-item
+            matRipple
+             [routerLink]="item.route"
+             routerLinkActive="mat-active-link"
+             [routerLinkActiveOptions]="item.route === '/' ? {exact: true} : {exact: false}"
+             class="nav-item">
+            <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+            <span matListItemTitle>{{ item.label }}</span>
+            @if (item.badge) {
+              <span matListItemMeta>
+                <span matBadge="{{ item.badge }}" 
+                      matBadgeColor="warn"
+                      matBadgeSize="small" 
+                      matBadgeOverlap="true"></span>
+              </span>
+            }
+          </a>
         }
-      </a>
-      } }
-    </mat-expansion-panel>
-    } }
+        <!-- Menüeintrag mit Untereinträgen -->
+        @else { 
+          @if (hasVisibleChildren(item)) {
+            <mat-expansion-panel 
+              class="nav-expansion" 
+              [expanded]="isExpanded(item)"
+              [hideToggle]="false">
+              <mat-expansion-panel-header class="nav-expansion-header">
+                <mat-panel-title class="nav-expansion-title">
+                  <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
+                  <span>{{ item.label }}</span>
+                  @if (item.badge) {
+                    <span matBadge="{{ item.badge }}" 
+                          matBadgeColor="warn"
+                          matBadgeSize="small" 
+                          matBadgeOverlap="true"></span>
+                  }
+                </mat-panel-title>
+              </mat-expansion-panel-header>
 
-    <!-- Trennlinie nach Administration -->
-    @if (item.label === 'Administration') {
-    <mat-divider></mat-divider>
-    } } }
-  </div>
+              <!-- Untermenüeinträge -->
+              <mat-nav-list dense class="child-nav-list">
+                @for (childItem of item.children; track childItem.label) { 
+                  @if (hasRequiredRole(childItem)) {
+                    <a mat-list-item
+                        matRipple
+                       [routerLink]="childItem.route"
+                       routerLinkActive="mat-active-child-link"
+                       class="nav-child-item">
+                      <mat-icon matListItemIcon>{{ childItem.icon }}</mat-icon>
+                      <span matListItemTitle>{{ childItem.label }}</span>
+                      @if (childItem.badge) {
+                        <span matListItemMeta>
+                          <span matBadge="{{ childItem.badge }}" 
+                                matBadgeColor="warn"
+                                matBadgeSize="small" 
+                                matBadgeOverlap="true"></span>
+                        </span>
+                      }
+                    </a>
+                  }
+                }
+              </mat-nav-list>
+            </mat-expansion-panel>
+          }
+        }
+
+        <!-- Trennlinie nach Administration -->
+        @if (item.label === 'Administration') {
+          <mat-divider></mat-divider>
+        }
+      }
+    }
+  </mat-nav-list>
 
   <!-- Fußbereich mit Version und Offline-Status -->
   <div class="sidebar-footer">
