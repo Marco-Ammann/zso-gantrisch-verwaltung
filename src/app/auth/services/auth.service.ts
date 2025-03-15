@@ -35,7 +35,8 @@ import { Subscription } from 'rxjs';
   providedIn: 'root',
 })
 export class AuthService implements OnDestroy {
-  private auth: Auth = inject(Auth);
+  // Change from private to public for diagnostic component
+  public auth: Auth = inject(Auth);
   private firebaseService = inject(FirebaseService);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
@@ -111,7 +112,7 @@ export class AuthService implements OnDestroy {
             console.log('Versuche Benutzerdaten zu laden für UID:', firebaseUser.uid);
             
             // Log the token for debugging
-            const token = await firebaseUser.getIdToken();
+            const token = await firebaseUser.getIdToken(true); // Force refresh token
             console.log('Auth token available:', !!token);
             
             const userDoc = await this.firebaseService.query<User>(
@@ -122,8 +123,10 @@ export class AuthService implements OnDestroy {
             );
 
             if (userDoc && userDoc.length > 0) {
-              console.log('Benutzerdaten geladen:', userDoc[0]);
-              this._currentUser.set(userDoc[0]);
+              const user = userDoc[0];
+              console.log('Benutzerdaten geladen:', user);
+              console.log('Benutzerrolle:', user.role);
+              this._currentUser.set(user);
               localStorage.setItem('user_id', firebaseUser.uid);
             } else {
               // Create with retry logic if first attempt fails
@@ -176,8 +179,8 @@ export class AuthService implements OnDestroy {
         emailVerified: firebaseUser.emailVerified
       };
 
-      // Add user document to Firestore
-      await this.firebaseService.add('users', newUser);
+      // Use the specialized method for adding user documents
+      await this.firebaseService.addUserDocument(newUser);
       console.log('Benutzerdokument erfolgreich erstellt');
       
       // Update local state
@@ -295,6 +298,8 @@ export class AuthService implements OnDestroy {
     this._error.set(null);
 
     try {
+      console.log('Starting user registration for email:', email);
+      
       // Benutzer in Firebase Authentication erstellen
       const userCredential = await createUserWithEmailAndPassword(
         this.auth,
@@ -302,9 +307,11 @@ export class AuthService implements OnDestroy {
         password
       );
       const firebaseUser = userCredential.user;
+      console.log('Firebase auth user created, uid:', firebaseUser.uid);
 
       // Anzeigename setzen
       await updateProfile(firebaseUser, { displayName });
+      console.log('User profile updated with displayName');
 
       // Benutzerdaten in Firestore speichern
       const newUser: User = {
@@ -312,16 +319,23 @@ export class AuthService implements OnDestroy {
         email: email,
         displayName: displayName,
         role: role,
+        emailVerified: false,
+        createdAt: new Date()
       };
 
-      await this.firebaseService.add('users', newUser);
+      console.log('Adding user document to Firestore');
+      // Use the specialized method for adding user documents during registration
+      await this.firebaseService.addUserDocument(newUser);
+      console.log('User document added to Firestore');
 
       // Send verification email
       await this.sendEmailVerification(userCredential.user);
+      console.log('Verification email sent');
       
       // Sign out the user immediately after registration
       // They need to verify their email first
       await this.logout();
+      console.log('User logged out after registration');
       
       return;
     } catch (error: any) {
@@ -406,6 +420,34 @@ export class AuthService implements OnDestroy {
   hasRole(roles: User['role'][]): boolean {
     const currentRole = this.userRole();
     return currentRole ? roles.includes(currentRole) : false;
+  }
+
+  /**
+   * Enhanced Role-Check Method
+   * @param requiredRoles Array of roles that are allowed
+   */
+  public hasRequiredRole(requiredRoles: string[]): boolean {
+    const currentRole = this.userRole();
+    const hasRole = currentRole ? requiredRoles.includes(currentRole) : false;
+    console.log(`Role check: User has role ${currentRole}, required one of [${requiredRoles.join(', ')}], result: ${hasRole}`);
+    return hasRole;
+  }
+
+  /**
+   * Debug method to log the current auth state
+   */
+  public logAuthState(): void {
+    const user = this.currentUser();
+    console.log('Current Auth State:', {
+      authenticated: this.isAuthenticated(),
+      user: user ? {
+        uid: user.uid,
+        email: user.email,
+        role: user.role,
+        displayName: user.displayName
+      } : null,
+      token: this.auth.currentUser ? 'available' : 'not available'
+    });
   }
 
   /**

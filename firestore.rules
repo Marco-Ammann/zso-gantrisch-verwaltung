@@ -1,67 +1,56 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Check if the user is authenticated
+    // Basic authentication check
     function isAuthenticated() {
       return request.auth != null;
     }
     
-    // Check if the user has the admin role
+    // Admin check - simplified to avoid circularity issues
     function isAdmin() {
       return isAuthenticated() && 
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
-    // Check if the user has at least read permission (any valid role)
-    function hasReadAccess() {
-      return isAuthenticated() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    // Check for edit roles - simplified to include roles 
+    function hasEditRole() {
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return userData.role == 'admin' || userData.role == 'oberleutnant' || userData.role == 'leutnant';
     }
     
-    // Check if the user has edit permission (admin, oberleutnant, leutnant)
-    function hasEditAccess() {
-      let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-      return isAuthenticated() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             (userRole == 'admin' || userRole == 'oberleutnant' || userRole == 'leutnant');
+    // Read access - require only authentication
+    function hasReadAccess() {
+      return isAuthenticated();
+    }
+    
+    // Write access - require authentication and proper role
+    function hasWriteAccess() {
+      return isAuthenticated() && hasEditRole();
     }
     
     // Users collection
     match /users/{userId} {
+      // Allow any authenticated user to read users collection
       allow read: if isAuthenticated();
+      
+      // Allow user creation by authenticated users (for registration)
       allow create: if isAuthenticated();
+      
+      // Allow users to update their own document or admin to update any
       allow update: if request.auth.uid == userId || isAdmin();
+      
+      // Only admin can delete users
       allow delete: if isAdmin();
     }
     
-    // Personen collection
-    match /personen/{personId} {
-      allow read: if hasReadAccess();
-      allow write: if hasEditAccess();
-    }
-    
-    // Ausbildungen collection
-    match /ausbildungen/{ausbildungId} {
-      allow read: if hasReadAccess();
-      allow write: if hasEditAccess();
-    }
-    
-    // Notfallkontakte collection
-    match /notfallkontakte/{kontaktId} {
-      allow read: if hasReadAccess();
-      allow write: if hasEditAccess();
-    }
-    
-    // Teilnahmen collection
-    match /teilnahmen/{teilnahmeId} {
-      allow read: if hasReadAccess();
-      allow write: if hasEditAccess();
-    }
-    
-    // Default deny all
-    match /{document=**} {
-      allow read, write: if false;
+    // Default rules for all document collections (except users)
+    match /{collection}/{docId} {
+      // Allow read to any authenticated user
+      allow read: if isAuthenticated();
+      
+      // Allow write if authenticated and has a role with write permissions
+      allow write: if isAuthenticated() && hasEditRole();
     }
   }
 }

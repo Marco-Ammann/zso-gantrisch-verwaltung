@@ -8,6 +8,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { FirebaseService } from '../../core/services/firebase.service';
 import { Auth } from '@angular/fire/auth';
 
+interface TestResult {
+  name: string;
+  running: boolean;
+  success: boolean | null; // Update type to allow boolean or null
+  message: string;
+}
+
 @Component({
   selector: 'app-firebase-rules-tester',
   standalone: true,
@@ -122,7 +129,7 @@ export class FirebaseRulesTesterComponent implements OnInit {
   uid = '';
   isRunning = false;
   
-  tests = [
+  tests: TestResult[] = [
     { name: 'Read users collection', running: false, success: null, message: '' },
     { name: 'Read personen collection', running: false, success: null, message: '' },
     { name: 'Read ausbildungen collection', running: false, success: null, message: '' },
@@ -178,7 +185,7 @@ export class FirebaseRulesTesterComponent implements OnInit {
         } else {
           return { success: false, message: 'User document not found' };
         }
-      } catch (error) {
+      } catch (error: any) { // Type error as 'any'
         return { success: false, message: error.message || 'Error updating user document' };
       }
     });
@@ -193,7 +200,7 @@ export class FirebaseRulesTesterComponent implements OnInit {
       const result = await testFn();
       this.tests[index].success = result.success;
       this.tests[index].message = result.message;
-    } catch (error) {
+    } catch (error: any) { // Type error as 'any'
       this.tests[index].success = false;
       this.tests[index].message = error.message || 'Test failed';
     } finally {

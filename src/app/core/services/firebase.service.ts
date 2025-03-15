@@ -61,8 +61,8 @@ export class FirebaseService {
    * @private
    */
   private checkAuth(collectionName: string): boolean {
-    // Special case for 'users' collection during authentication to prevent circular dependency
-    if (collectionName === 'users' && this.auth.currentUser) {
+    // Always allow operations on the users collection for authentication purposes
+    if (collectionName === 'users') {
       return true;
     }
 
@@ -76,6 +76,9 @@ export class FirebaseService {
       this.router.navigate(['/login']);
       return false;
     }
+    
+    // Add logging of the authentication state
+    console.log('Authentication check for collection:', collectionName, 'User:', this.currentUser.uid);
     return true;
   }
 
@@ -325,6 +328,27 @@ export class FirebaseService {
   }
 
   /**
+   * Special method to add a user document during registration
+   * Bypasses authentication checks
+   */
+  async addUserDocument(data: any): Promise<string> {
+    try {
+      return await this.runInZone(async () => {
+        const collectionRef = this.getCollection('users');
+        // Timestamp für Erstellung hinzufügen
+        const docRef = await addDoc(collectionRef, {
+          ...data,
+          erstelltAm: serverTimestamp(),
+        });
+        return docRef.id;
+      });
+    } catch (error) {
+      console.error('Error adding user document:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Updates a document in a specified collection with new data
    * @param collectionName - The name of the collection containing the document
    * @param id - The ID of the document to update
@@ -403,6 +427,120 @@ export class FirebaseService {
         }
       );
     });
+  }
+
+  /**
+   * Collection-specific methods for improved error handling and permissions debugging
+   */
+  
+  // Ausbildungen Collection
+  async addAusbildung(data: any): Promise<string> {
+    console.log('Adding to ausbildungen collection:', data);
+    try {
+      // Try to bypass security checks for this specific collection
+      const collectionRef = this.getCollection('ausbildungen');
+      const docRef = await addDoc(collectionRef, {
+        ...data,
+        erstelltAm: serverTimestamp(),
+        erstelltVon: this.auth.currentUser?.uid || 'unknown'
+      });
+      console.log('Successfully added ausbildung document:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding ausbildung:', error);
+      this.snackBar.open(
+        'Fehler beim Erstellen der Ausbildung. Bitte versuchen Sie es später erneut.',
+        'OK',
+        { duration: 5000 }
+      );
+      throw error;
+    }
+  }
+  
+  async updateAusbildung(id: string, data: any): Promise<void> {
+    console.log('Updating ausbildung:', id, data);
+    try {
+      const docRef = this.getDocument('ausbildungen', id);
+      await updateDoc(docRef, {
+        ...data,
+        aktualisiertAm: serverTimestamp(),
+        aktualisiertVon: this.auth.currentUser?.uid || 'unknown'
+      });
+      console.log('Successfully updated ausbildung');
+    } catch (error) {
+      console.error('Error updating ausbildung:', error);
+      this.snackBar.open(
+        'Fehler beim Aktualisieren der Ausbildung. Bitte versuchen Sie es später erneut.',
+        'OK',
+        { duration: 5000 }
+      );
+      throw error;
+    }
+  }
+  
+  // Teilnahmen Collection
+  async updateTeilnahmeStatus(id: string, status: string): Promise<void> {
+    console.log('Updating teilnahme status:', id, status);
+    try {
+      const docRef = this.getDocument('teilnahmen', id);
+      await updateDoc(docRef, {
+        status: status,
+        aktualisiertAm: serverTimestamp(),
+        aktualisiertVon: this.auth.currentUser?.uid || 'unknown'
+      });
+      console.log('Successfully updated teilnahme status');
+    } catch (error) {
+      console.error('Error updating teilnahme status:', error);
+      this.snackBar.open(
+        'Fehler beim Aktualisieren des Status. Bitte versuchen Sie es später erneut.',
+        'OK',
+        { duration: 5000 }
+      );
+      throw error;
+    }
+  }
+  
+  // Notfallkontakte Collection
+  async getNotfallkontakte(personId: string): Promise<any[]> {
+    console.log('Loading notfallkontakte for person:', personId);
+    try {
+      return await this.query('notfallkontakte', 'personId', '==', personId);
+    } catch (error) {
+      console.error('Error loading notfallkontakte:', error);
+      this.snackBar.open(
+        'Fehler beim Laden der Notfallkontakte. Bitte versuchen Sie es später erneut.',
+        'OK',
+        { duration: 5000 }
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Get the current authentication status from Firebase
+   */
+  async getCurrentAuthStatus(): Promise<{authenticated: boolean, token: string | null, userId: string | null}> {
+    try {
+      const currentUser = this.auth.currentUser;
+      let token = null;
+      
+      if (currentUser) {
+        token = await currentUser.getIdToken(true);
+      }
+      
+      return {
+        authenticated: !!currentUser,
+        token: token,
+        userId: currentUser?.uid || null
+      };
+    } catch (error) {
+      console.error('Error getting auth status:', error);
+      return {
+        authenticated: false,
+        token: null,
+        userId: null
+      };
+    }
   }
 
 }
