@@ -1,0 +1,372 @@
+.appell-container {
+  padding: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+  
+  .breadcrumb {
+    margin-bottom: 16px;
+  }
+  
+  .page-header {
+    margin-bottom: 16px;
+    
+    .page-title {
+      margin: 0 0 8px 0;
+      font-size: 24px;
+      font-weight: 500;
+    }
+    
+    .page-description {
+      color: #666;
+      margin: 0;
+    }
+  }
+  
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    
+    p {
+      margin-top: 16px;
+      color: #666;
+    }
+  }
+  
+  .error-message {
+    display: flex;
+    align-items: center;
+    color: #f44336;
+    
+    mat-icon {
+      margin-right: 8px;
+    }
+  }
+  
+  .header-card {
+    margin-bottom: 16px;
+    
+    .ausbildung-info {
+      display: flex;
+      flex-direction: column;
+      
+      .page-title {
+        margin: 0 0 8px 0;
+        font-size: 24px;
+      }
+      
+      .info-details {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        
+        .typ-badge {
+          display: inline-block;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-weight: 500;
+          font-size: 14px;
+          
+          &.typ-WK {
+            background-color: #bbdefb;
+            color: #0d47a1;
+          }
+          
+          &.typ-LG {
+            background-color: #c8e6c9;
+            color: #1b5e20;
+          }
+          
+          &.typ-KVK {
+            background-color: #ffecb3;
+            color: #ff6f00;
+          }
+          
+          &.typ-Übung {
+            background-color: #e1bee7;
+            color: #4a148c;
+          }
+          
+          &.typ-Kurs {
+            background-color: #d1c4e9;
+            color: #311b92;
+          }
+        }
+        
+        .year-text {
+          font-weight: 500;
+          color: #666;
+        }
+        
+        .date-range {
+          .date-badge {
+            display: flex;
+            align-items: center;
+            background-color: #e8f5e9;
+            color: #1b5e20;
+            padding: 4px 8px;
+            border-radius: 16px;
+            font-weight: 500;
+            
+            mat-icon {
+              font-size: 16px;
+              width: 16px;
+              height: 16px;
+              margin-right: 4px;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  .statistics-bar {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    
+    .stats-card {
+      flex: 1;
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      
+      .stats-number {
+        font-size: 32px;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 8px;
+        color: #1976d2;
+      }
+      
+      .stats-label {
+        font-size: 14px;
+        color: #666;
+      }
+    }
+  }
+  
+  .day-tabs-container {
+    margin-bottom: 16px;
+    
+    .section-title {
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      font-weight: 500;
+    }
+    
+    .day-tabs {
+      min-height: 400px;
+      
+      ::ng-deep .mat-mdc-tab-body-wrapper {
+        flex: 1;
+      }
+    }
+    
+    .day-content {
+      padding: 16px 0;
+      
+      .day-title {
+        margin: 0 0 16px 0;
+        font-size: 20px;
+        font-weight: 500;
+        color: #1976d2;
+        
+        .time-info {
+          font-size: 16px;
+          color: #666;
+          font-weight: 400;
+          margin-left: 8px;
+        }
+      }
+    }
+  }
+  
+  .filter-section {
+    margin-bottom: 16px;
+    
+    .filter-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      
+      mat-form-field {
+        flex: 1;
+        min-width: 150px;
+      }
+    }
+  }
+  
+  .responsive-table-container {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 500px;
+    margin-bottom: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .appell-table {
+    width: 100%;
+    
+    .name-cell {
+      font-weight: 500;
+      min-width: 150px;
+    }
+    
+    .status-buttons {
+      display: flex;
+      align-items: center;
+      
+      button {
+        opacity: 0.5;
+        
+        &.active {
+          opacity: 1;
+        }
+      }
+      
+      .status-text {
+        margin-left: 8px;
+        font-weight: 500;
+      }
+    }
+    
+    .bemerkung-field {
+      width: 100%;
+    }
+    
+    .actions-cell {
+      width: 60px;
+      text-align: center;
+    }
+    
+    td.status-anwesend {
+      .status-text {
+        color: #4caf50;
+      }
+    }
+    
+    td.status-entschuldigt {
+      .status-text {
+        color: #ff9800;
+      }
+    }
+    
+    td.status-abwesend {
+      .status-text {
+        color: #f44336;
+      }
+    }
+  }
+  
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+      color: #9e9e9e;
+    }
+    
+    p {
+      margin-bottom: 8px;
+      color: #666;
+      text-align: center;
+    }
+  }
+  
+  .action-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 16px;
+    
+    button {
+      min-width: 150px;
+    }
+  }
+  
+  .person-name {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+      
+      .view-icon {
+        opacity: 1;
+      }
+    }
+    
+    .view-icon {
+      margin-left: 8px;
+      opacity: 0;
+      font-size: 16px;
+      height: 16px;
+      width: 16px;
+      transition: opacity 0.2s;
+    }
+  }
+}
+
+// Fix for the bemerkung input field
+.mat-mdc-form-field.bemerkung-field .mat-mdc-text-field-wrapper {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.mat-mdc-form-field.bemerkung-field .mat-mdc-form-field-flex {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.mat-mdc-form-field.bemerkung-field .mdc-text-field--outlined {
+  --mdc-outlined-text-field-container-height: 36px;
+}
+
+// Responsive styles
+@media (max-width: 768px) {
+  .appell-container {
+    .statistics-bar {
+      flex-wrap: wrap;
+      
+      .stats-card {
+        min-width: calc(50% - 16px);
+      }
+    }
+    
+    .filter-section {
+      .filter-controls {
+        flex-direction: column;
+        
+        mat-form-field {
+          width: 100%;
+        }
+      }
+    }
+    
+    .action-buttons {
+      flex-direction: column;
+      
+      button {
+        width: 100%;
+      }
+    }
+  }
+}

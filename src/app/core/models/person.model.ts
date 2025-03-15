@@ -1,3 +1,12 @@
+export interface NotfallKontakt {
+  name: string;
+  beziehung: string;
+  telefon?: string;
+  mobilTelefon?: string;
+  email?: string;
+  bemerkungen?: string;
+}
+
 export interface Person {
     id: string;
     grunddaten: {
@@ -49,4 +58,6 @@ export interface Person {
       aktualisiert_von: string;
       [key: string]: any; // Für zukünftige Erweiterungen
     };
-  }
+
+    notfallkontakte?: NotfallKontakt[];
+}

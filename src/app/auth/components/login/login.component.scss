@@ -89,6 +89,37 @@
     margin-top: 20px;
   }
   
+  .forgot-password {
+    text-align: right;
+    margin-top: -8px;
+    margin-bottom: 16px;
+    
+    a {
+      font-size: 0.85rem;
+      text-decoration: none;
+      cursor: pointer;
+    }
+  }
+  
+  .register-section {
+    margin-top: 24px;
+    text-align: center;
+    
+    p {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    
+    .register-button {
+      width: 100%;
+      
+      mat-icon {
+        margin-right: 8px;
+      }
+    }
+  }
+  
   // Responsive Anpassungen
   @media (max-width: 600px) {
     .login-card {

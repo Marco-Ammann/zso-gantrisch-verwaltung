@@ -87,20 +87,46 @@
           </mat-form-field>
         </div>
 
+        <!-- Keep only one set of date/time fields -->
         <div class="form-row">
-          <mat-form-field appearance="outline">
-            <mat-label>Datum</mat-label>
-            <input 
-              matInput 
-              [matDatepicker]="picker" 
-              formControlName="datum"
-              placeholder="DD/MM/YYYY"
-            >
-            <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-            <mat-datepicker #picker></mat-datepicker>
-            <mat-hint>Konkretes Datum der Durchführung</mat-hint>
-            <mat-error *ngIf="hasError('datum', 'required')">
-              Datum ist erforderlich
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Startdatum</mat-label>
+            <input matInput [matDatepicker]="startPicker" formControlName="startDatum" required>
+            <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+            <mat-datepicker #startPicker></mat-datepicker>
+            <mat-error *ngIf="hasError('startDatum', 'required')">
+              Startdatum ist erforderlich
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Startzeit</mat-label>
+            <input matInput type="time" formControlName="startZeit">
+            <mat-error *ngIf="hasError('startZeit', 'pattern')">
+              Bitte geben Sie eine gültige Zeit ein (HH:MM)
+            </mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Enddatum</mat-label>
+            <input matInput [matDatepicker]="endPicker" formControlName="endDatum" required>
+            <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+            <mat-datepicker #endPicker></mat-datepicker>
+            <mat-error *ngIf="hasError('endDatum', 'required')">
+              Enddatum ist erforderlich
+            </mat-error>
+            <mat-error *ngIf="hasError('endDatum', 'invalidRange')">
+              Enddatum muss nach Startdatum liegen
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Endzeit</mat-label>
+            <input matInput type="time" formControlName="endZeit">
+            <mat-error *ngIf="hasError('endZeit', 'pattern')">
+              Bitte geben Sie eine gültige Zeit ein (HH:MM)
             </mat-error>
           </mat-form-field>
         </div>

@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if the user has the admin role
+    function isAdmin() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Check if the user has at least read permission (any valid role)
+    function hasReadAccess() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    
+    // Check if the user has edit permission (admin, oberleutnant, leutnant)
+    function hasEditAccess() {
+      let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             (userRole == 'admin' || userRole == 'oberleutnant' || userRole == 'leutnant');
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if request.auth.uid == userId || isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // Personen collection
+    match /personen/{personId} {
+      allow read: if hasReadAccess();
+      allow write: if hasEditAccess();
+    }
+    
+    // Ausbildungen collection
+    match /ausbildungen/{ausbildungId} {
+      allow read: if hasReadAccess();
+      allow write: if hasEditAccess();
+    }
+    
+    // Notfallkontakte collection
+    match /notfallkontakte/{kontaktId} {
+      allow read: if hasReadAccess();
+      allow write: if hasEditAccess();
+    }
+    
+    // Teilnahmen collection
+    match /teilnahmen/{teilnahmeId} {
+      allow read: if hasReadAccess();
+      allow write: if hasEditAccess();
+    }
+    
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

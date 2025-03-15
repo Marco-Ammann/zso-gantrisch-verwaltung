@@ -1,0 +1,76 @@
+.search-container {
+  margin-bottom: 16px;
+  
+  .search-field {
+    width: 100%;
+  }
+}
+
+.table-container {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+
+.teilnehmer-table {
+  width: 100%;
+  
+  .mat-mdc-row {
+    cursor: pointer;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+    
+    &.selected-row {
+      background-color: rgba(25, 118, 210, 0.12);
+    }
+  }
+  
+  .mat-column-select {
+    width: 48px;
+    padding-right: 8px;
+  }
+  
+  .mat-column-grad {
+    width: 120px;
+  }
+  
+  .mat-column-zug {
+    width: 80px;
+    text-align: center;
+  }
+}
+
+.empty-row {
+  padding: 16px;
+  text-align: center;
+  color: rgba(0, 0, 0, 0.54);
+}
+
+.selection-summary {
+  margin-top: 16px;
+  font-weight: 500;
+  color: #1976d2;
+}
+
+mat-dialog-content {
+  min-height: 400px;
+  max-height: 80vh;
+}
+
+mat-dialog-actions {
+  justify-content: flex-end;
+  padding: 16px 0 0;
+}
+
+mat-spinner {
+  display: inline-block;
+  margin: 0 8px;
+}
+
+button {
+  &:disabled {
+    cursor: not-allowed;
+  }
+}

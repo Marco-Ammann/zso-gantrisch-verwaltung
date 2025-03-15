@@ -19,6 +19,7 @@ import { AuthService } from '../../../auth/services/auth.service';
 import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog/confirm-dialog.component';
 import { PdfProgressDialogComponent } from '../../../core/utils/pdf-progress-dialog.component';
 import { CommonModule } from '@angular/common';
+import { TeilnehmerSelectionDialogComponent } from '../teilnehmer-selection-dialog/teilnehmer-selection-dialog.component';
 
 @Component({
   selector: 'app-ausbildung-detail',
@@ -231,16 +232,40 @@ export class AusbildungDetailComponent implements OnInit {
   }
 
   formatDate(date: any): string {
-    if (!date) return '-';
-    try {
-      if (date && typeof date.toDate === 'function') {
-        return date.toDate().toLocaleDateString('de-CH');
-      }
-      return new Date(date).toLocaleDateString('de-CH');
-    } catch (error) {
-      console.error('Fehler bei der Datumsformatierung:', error);
-      return '-';
+    if (!date) return 'Nicht angegeben';
+    
+    const jsDate = typeof date.toDate === 'function' 
+      ? date.toDate() 
+      : new Date(date);
+      
+    return jsDate.toLocaleDateString('de-CH', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  }
+
+  /**
+   * Format date and time for display
+   */
+  formatDateWithTime(date: any, time?: string): string {
+    if (!date) return 'Nicht angegeben';
+    
+    const jsDate = typeof date.toDate === 'function' 
+      ? date.toDate() 
+      : new Date(date);
+      
+    const dateString = jsDate.toLocaleDateString('de-CH', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    
+    if (time) {
+      return `${dateString}, ${time} Uhr`;
     }
+    
+    return dateString;
   }
 
   private showSnackBar(message: string): void {
@@ -248,6 +273,39 @@ export class AusbildungDetailComponent implements OnInit {
       duration: 3000,
       horizontalPosition: 'center',
       verticalPosition: 'bottom',
+    });
+  }
+
+  /**
+   * Opens the participant management dialog
+   */
+  openTeilnehmerDialog(): void {
+    if (!this.ausbildungId) return;
+    
+    // Get active persons
+    const aktivPersonen = this.personen().filter(p => p.zivilschutz?.status === 'aktiv');
+    
+    // Get existing participant IDs
+    const existingParticipantIds = this.teilnahmen()
+      .map(teilnahme => teilnahme.personId)
+      .filter(id => !!id);
+    
+    // Open the dialog
+    const dialogRef = this.dialog.open(TeilnehmerSelectionDialogComponent, {
+      width: '800px',
+      data: {
+        availablePersons: aktivPersonen,
+        preselectedPersonIds: existingParticipantIds,
+        ausbildungId: this.ausbildungId
+      }
+    });
+  
+    // Handle dialog close - reload participants
+    dialogRef.afterClosed().subscribe(result => {
+      // If dialog was confirmed (not dismissed), reload participant data
+      if (result === true) {
+        this.loadTeilnahmen(this.ausbildungId!);
+      }
     });
   }
 }

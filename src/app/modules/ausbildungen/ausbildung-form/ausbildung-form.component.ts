@@ -109,14 +109,43 @@ export class AusbildungFormComponent implements OnInit {
    */
   private createAusbildungForm(): FormGroup {
     const currentYear = new Date().getFullYear();
+    const today = new Date();
+    
     return this.fb.group({
       titel: ['', [Validators.required]],
       beschreibung: [''],
       typ: ['WK', [Validators.required]],
       jahr: [currentYear, [Validators.required, Validators.min(2000), Validators.max(2100)]],
-      datum: [new Date(), [Validators.required]],
+      // Date fields
+      startDatum: [today, [Validators.required]],
+      endDatum: [today, [Validators.required]],
+      // Time fields
+      startZeit: ['08:00', [Validators.pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)]],
+      endZeit: ['17:00', [Validators.pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)]],
+      // Keep datum for backward compatibility
+      datum: [today, [Validators.required]],
       erforderlich: [false]
-    });
+    }, { validators: this.dateRangeValidator });
+  }
+
+  /**
+   * Validates that end date is after or equal to start date
+   */
+  private dateRangeValidator(form: FormGroup): { [key: string]: boolean } | null {
+    const startDate = form.get('startDatum')?.value;
+    const endDate = form.get('endDatum')?.value;
+    
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      if (start > end) {
+        form.get('endDatum')?.setErrors({ invalidRange: true });
+        return { invalidRange: true };
+      }
+    }
+    
+    return null;
   }
 
   /**
@@ -132,7 +161,9 @@ export class AusbildungFormComponent implements OnInit {
         return;
       }
 
-      const datumValue = this.parseDateValue(ausbildung.datum);
+      let datumValue = this.parseDateValue(ausbildung.datum);
+      let startDatumValue = ausbildung.startDatum ? this.parseDateValue(ausbildung.startDatum) : datumValue;
+      let endDatumValue = ausbildung.endDatum ? this.parseDateValue(ausbildung.endDatum) : datumValue;
       
       this.ausbildungForm.patchValue({
         titel: ausbildung.titel,
@@ -140,6 +171,10 @@ export class AusbildungFormComponent implements OnInit {
         typ: ausbildung.typ,
         jahr: ausbildung.jahr,
         datum: datumValue,
+        startDatum: startDatumValue,
+        endDatum: endDatumValue,
+        startZeit: ausbildung.startZeit || '08:00',
+        endZeit: ausbildung.endZeit || '17:00',
         erforderlich: ausbildung.erforderlich ?? false
       });
     } catch (error) {
@@ -193,7 +228,11 @@ export class AusbildungFormComponent implements OnInit {
         titel: formValue.titel,
         beschreibung: formValue.beschreibung,
         typ: formValue.typ,
-        datum: formValue.datum,
+        datum: formValue.startDatum, // Use startDate for backward compatibility
+        startDatum: formValue.startDatum,
+        endDatum: formValue.endDatum,
+        startZeit: formValue.startZeit,
+        endZeit: formValue.endZeit,
         jahr: formValue.jahr,
         erforderlich: formValue.erforderlich
       };

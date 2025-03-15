@@ -10,7 +10,8 @@
           <!-- Fehlermeldung -->
           @if (errorMessage()) {
             <div class="error-message">
-              {{ errorMessage() }}
+              <mat-icon>error</mat-icon>
+              <span>{{ errorMessage() }}</span>
             </div>
           }
           
@@ -50,6 +51,11 @@
             }
           </mat-form-field>
           
+          <!-- Password recovery link -->
+          <div class="forgot-password">
+            <a mat-button color="primary" (click)="openPasswordResetDialog()">Passwort vergessen?</a>
+          </div>
+          
           <!-- Anmelde-Button -->
           <div class="button-container">
             <button 
@@ -70,12 +76,25 @@
             </button>
           </div>
         </form>
+
+        <!-- Register button -->
+        <div class="register-section">
+          <p>Noch kein Konto?</p>
+          <button 
+            mat-stroked-button 
+            color="primary"
+            (click)="goToRegister()" 
+            class="register-button">
+            <mat-icon>person_add</mat-icon>
+            <span>Registrieren</span>
+          </button>
+        </div>
       </mat-card-content>
       
       <!-- Fußzeile mit Hilfetext -->
       <mat-card-footer>
         <div class="footer-text">
-          Passwort vergessen oder Zugang benötigt? Bitte kontaktieren Sie den Administrator.
+          Bei Problemen wenden Sie sich bitte an den Administrator.
         </div>
       </mat-card-footer>
     </mat-card>

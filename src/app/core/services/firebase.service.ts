@@ -21,6 +21,10 @@ import {
   uploadBytesResumable,
   getDownloadURL,
 } from '@angular/fire/storage';
+import { Auth, onAuthStateChanged, User } from '@angular/fire/auth';
+import { BehaviorSubject } from 'rxjs';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
 
 /**
  * Zentrale Service-Klasse für Firestore-Zugriffe
@@ -33,8 +37,70 @@ export class FirebaseService {
   private firestore: Firestore = inject(Firestore);
   private storage: Storage = inject(Storage);
   private ngZone = inject(NgZone);
+  private auth: Auth = inject(Auth);
+  private snackBar = inject(MatSnackBar);
+  private router = inject(Router);
 
+  private _isAuthenticated = new BehaviorSubject<boolean>(false);
+  public isAuthenticated$ = this._isAuthenticated.asObservable();
+  private currentUser: User | null = null;
 
+  constructor() {
+    // Monitor auth state
+    onAuthStateChanged(this.auth, (user) => {
+      this.currentUser = user;
+      this._isAuthenticated.next(!!user);
+    });
+  }
+
+  /**
+   * Check if user is authenticated before performing database operations
+   * Special handling for authentication-related collections to avoid circular dependency
+   * @param collectionName The name of the collection being accessed
+   * @returns boolean indicating if operation should proceed
+   * @private
+   */
+  private checkAuth(collectionName: string): boolean {
+    // Special case for 'users' collection during authentication to prevent circular dependency
+    if (collectionName === 'users' && this.auth.currentUser) {
+      return true;
+    }
+
+    if (!this.currentUser) {
+      console.error('User not authenticated. Operation aborted.');
+      this.snackBar.open(
+        'Sie müssen angemeldet sein, um diese Aktion auszuführen.',
+        'OK',
+        { duration: 5000 }
+      );
+      this.router.navigate(['/login']);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Handle Firebase errors with better logging and user feedback
+   * @param error The Firebase error
+   * @param operation The name of the operation that failed
+   * @private
+   */
+  private handleFirebaseError(error: any, operation: string): void {
+    console.error(`${operation} error:`, error);
+    
+    let message = 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.';
+    
+    if (error.code === 'permission-denied' || error.message?.includes('permission')) {
+      message = 'Fehlende Berechtigungen. Bitte melden Sie sich an oder kontaktieren Sie den Administrator.';
+      this.router.navigate(['/login']);
+    }
+    
+    this.snackBar.open(message, 'OK', {
+      duration: 5000,
+    });
+    
+    throw error;
+  }
 
   /**
    * Executes a promise-returning function outside of Angular's zone and then brings the result
@@ -55,10 +121,14 @@ export class FirebaseService {
       .runOutsideAngular(() => fn())
       .then((result) => {
         return this.ngZone.run(() => result);
+      })
+      .catch((error) => {
+        // Process error in the Angular zone
+        return this.ngZone.run(() => {
+          throw error;
+        });
       });
   }
-
-
 
   /**
    * Returns a reference to a Firestore collection.
@@ -69,8 +139,6 @@ export class FirebaseService {
   getCollection(collectionName: string) {
     return collection(this.firestore, collectionName);
   }
-
-
 
   /**
    * Retrieves a document reference from Firestore.
@@ -83,8 +151,6 @@ export class FirebaseService {
     return doc(this.firestore, collectionName, id);
   }
 
-
-
   /**
    * Retrieves all documents from a specified Firestore collection.
    * 
@@ -93,14 +159,19 @@ export class FirebaseService {
    * @returns {Promise<T[]>} A promise that resolves to an array of documents with their IDs included
    */
   async getAll<T>(collectionName: string): Promise<T[]> {
-    return this.runInZone(async () => {
-      const collectionRef = this.getCollection(collectionName);
-      const snapshot = await getDocs(collectionRef);
-      return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as T));
-    });
+    if (!this.checkAuth(collectionName)) return [];
+    
+    try {
+      return await this.runInZone(async () => {
+        const collectionRef = this.getCollection(collectionName);
+        const snapshot = await getDocs(collectionRef);
+        return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as T));
+      });
+    } catch (error) {
+      this.handleFirebaseError(error, `Lesen der Sammlung '${collectionName}'`);
+      return [];
+    }
   }
-
-
 
   /**
    * Retrieves a document by its ID from a specified Firestore collection.
@@ -121,19 +192,24 @@ export class FirebaseService {
    * ```
    */
   async getById<T>(collectionName: string, id: string): Promise<T | null> {
-    return this.runInZone(async () => {
-      const docRef = this.getDocument(collectionName, id);
-      const docSnap = await getDoc(docRef);
+    if (!this.checkAuth(collectionName)) return null;
+    
+    try {
+      return await this.runInZone(async () => {
+        const docRef = this.getDocument(collectionName, id);
+        const docSnap = await getDoc(docRef);
 
-      if (docSnap.exists()) {
-        return { id, ...docSnap.data() } as T;
-      } else {
-        return null;
-      }
-    });
+        if (docSnap.exists()) {
+          return { id, ...docSnap.data() } as T;
+        } else {
+          return null;
+        }
+      });
+    } catch (error) {
+      this.handleFirebaseError(error, `Lesen des Dokuments '${id}' aus '${collectionName}'`);
+      return null;
+    }
   }
-
-
 
   /**
    * Performs a query on a Firebase collection based on specified field and conditions
@@ -155,15 +231,31 @@ export class FirebaseService {
     operator: any,
     value: any
   ): Promise<T[]> {
-    return this.runInZone(async () => {
-      const collectionRef = this.getCollection(collectionName);
-      const q = query(collectionRef, where(field, operator, value));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as T));
-    });
+    // Special handling for auth-related queries
+    if (collectionName === 'users' && field === 'uid' && operator === '==' && value === this.auth.currentUser?.uid) {
+      console.log('Special handling for user authentication query');
+      // Skip auth check for this specific case to avoid circular dependency
+    } else if (!this.checkAuth(collectionName)) {
+      return [];
+    }
+    
+    try {
+      return await this.runInZone(async () => {
+        const collectionRef = this.getCollection(collectionName);
+        const q = query(collectionRef, where(field, operator, value));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as T));
+      });
+    } catch (error) {
+      if (collectionName === 'users' && field === 'uid') {
+        // Special error handling for auth-related queries
+        console.error(`Auth-related query failed:`, error);
+        return [];
+      }
+      this.handleFirebaseError(error, `Abfrage der Sammlung '${collectionName}'`);
+      return [];
+    }
   }
-
-
 
   /**
    * Retrieves all documents from a specified collection, sorted by a given field.
@@ -185,15 +277,20 @@ export class FirebaseService {
     orderByField: string,
     direction: 'asc' | 'desc' = 'asc'
   ): Promise<T[]> {
-    return this.runInZone(async () => {
-      const collectionRef = this.getCollection(collectionName);
-      const q = query(collectionRef, orderBy(orderByField, direction));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as T));
-    });
+    if (!this.checkAuth(collectionName)) return [];
+    
+    try {
+      return await this.runInZone(async () => {
+        const collectionRef = this.getCollection(collectionName);
+        const q = query(collectionRef, orderBy(orderByField, direction));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as T));
+      });
+    } catch (error) {
+      this.handleFirebaseError(error, `Sortierte Abfrage der Sammlung '${collectionName}'`);
+      return [];
+    }
   }
-
-
 
   /**
    * Adds a new document to a specified collection in Firebase.
@@ -203,18 +300,29 @@ export class FirebaseService {
    * @remarks This method automatically adds a server timestamp field 'erstelltAm' to the document
    */
   async add(collectionName: string, data: any): Promise<string> {
-    return this.runInZone(async () => {
-      const collectionRef = this.getCollection(collectionName);
-      // Timestamp für Erstellung hinzufügen
-      const docRef = await addDoc(collectionRef, {
-        ...data,
-        erstelltAm: serverTimestamp(),
+    // Special case for adding users during authentication
+    if (collectionName === 'users' && data.uid === this.auth.currentUser?.uid) {
+      console.log('Special handling for creating user document during auth');
+      // Skip regular auth check
+    } else if (!this.checkAuth(collectionName)) {
+      throw new Error('Not authenticated');
+    }
+    
+    try {
+      return await this.runInZone(async () => {
+        const collectionRef = this.getCollection(collectionName);
+        // Timestamp für Erstellung hinzufügen
+        const docRef = await addDoc(collectionRef, {
+          ...data,
+          erstelltAm: serverTimestamp(),
+        });
+        return docRef.id;
       });
-      return docRef.id;
-    });
+    } catch (error) {
+      this.handleFirebaseError(error, `Erstellen in Sammlung '${collectionName}'`);
+      throw error;
+    }
   }
-
-
 
   /**
    * Updates a document in a specified collection with new data
@@ -226,17 +334,21 @@ export class FirebaseService {
    * @throws Will throw an error if the document update fails
    */
   async update(collectionName: string, id: string, data: any): Promise<void> {
-    return this.runInZone(async () => {
-      const docRef = this.getDocument(collectionName, id);
-      // Timestamp für Aktualisierung hinzufügen
-      await updateDoc(docRef, {
-        ...data,
-        aktualisiertAm: serverTimestamp(),
+    if (!this.checkAuth(collectionName)) throw new Error('Not authenticated');
+    
+    try {
+      await this.runInZone(async () => {
+        const docRef = this.getDocument(collectionName, id);
+        await updateDoc(docRef, {
+          ...data,
+          aktualisiertAm: serverTimestamp(),
+        });
       });
-    });
+    } catch (error) {
+      this.handleFirebaseError(error, `Aktualisieren des Dokuments '${id}' in '${collectionName}'`);
+      throw error;
+    }
   }
-
-
 
   /**
    * Deletes a document from a specified collection in Firebase.
@@ -246,13 +358,18 @@ export class FirebaseService {
    * @throws {FirebaseError} If the delete operation fails
    */
   async delete(collectionName: string, id: string): Promise<void> {
-    return this.runInZone(async () => {
-      const docRef = this.getDocument(collectionName, id);
-      return deleteDoc(docRef);
-    });
+    if (!this.checkAuth(collectionName)) throw new Error('Not authenticated');
+    
+    try {
+      await this.runInZone(async () => {
+        const docRef = this.getDocument(collectionName, id);
+        await deleteDoc(docRef);
+      });
+    } catch (error) {
+      this.handleFirebaseError(error, `Löschen des Dokuments '${id}' aus '${collectionName}'`);
+      throw error;
+    }
   }
-
-
 
   /**
    * Uploads a file to Firebase Storage and returns the download URL.
@@ -262,6 +379,8 @@ export class FirebaseService {
    * @throws {FirebaseError} If the upload fails
    */
   async uploadFile(path: string, file: File): Promise<string> {
+    if (!this.checkAuth(path)) throw new Error('Not authenticated');
+    
     const storageRef = ref(this.storage, path);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -269,10 +388,18 @@ export class FirebaseService {
       uploadTask.on(
         'state_changed',
         () => {},
-        (error) => reject(error),
+        (error) => {
+          this.handleFirebaseError(error, `Datei-Upload nach '${path}'`);
+          reject(error);
+        },
         async () => {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve(downloadURL);
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve(downloadURL);
+          } catch (error) {
+            this.handleFirebaseError(error, 'Abrufen der Download-URL');
+            reject(error);
+          }
         }
       );
     });

@@ -1,0 +1,284 @@
+<div class="appell-container">
+  <div class="breadcrumb">
+    <button mat-button color="primary" (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+      Zurück zur Ausbildungsdetails
+    </button>
+  </div>
+  
+  <div class="page-header">
+    <h1 class="page-title">Appell durchführen</h1>
+    <p class="page-description">Hier können Sie die Anwesenheit der Teilnehmer für jeden Tag der Ausbildung erfassen.</p>
+  </div>
+
+  <!-- Loading indicator -->
+  @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Daten werden geladen...</p>
+    </div>
+  } 
+  @else if (!ausbildung()) {
+    <mat-card appearance="outlined">
+      <mat-card-content>
+        <div class="error-message">
+          <mat-icon>error</mat-icon>
+          <p>Ausbildung nicht gefunden oder Fehler beim Laden der Daten.</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  } 
+  
+  <!-- Main content -->
+  @else {
+    <!-- Header with training info -->
+    <mat-card appearance="outlined" class="header-card">
+      <mat-card-content>
+        <div class="ausbildung-info">
+          <h2 class="page-title">{{ ausbildung()!.titel }}</h2>
+          <div class="info-details">
+            <span class="typ-badge" [ngClass]="'typ-' + ausbildung()!.typ">{{ ausbildung()!.typ }}</span>
+            <span class="year-text">{{ ausbildung()!.jahr }}</span>
+            <!-- Show date range with time in header -->
+            <div class="date-range">
+              <span class="date-badge">
+                <mat-icon>date_range</mat-icon>
+                {{ formatDateWithTime(ausbildung()!.startDatum, ausbildung()!.startZeit) }} - 
+                {{ formatDateWithTime(ausbildung()!.endDatum, ausbildung()!.endZeit) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+    
+    <!-- Statistics overview -->
+    <div class="statistics-bar">
+      <div class="stats-card">
+        <div class="stats-number">{{ selectedTeilnehmer().length }}</div>
+        <div class="stats-label">Teilnehmer gesamt</div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-number">{{ dateTabs().length }}</div>
+        <div class="stats-label">Ausbildungstage</div>
+      </div>
+      <!-- Add attendance statistics -->
+      <div class="stats-card">
+        <div class="stats-number" style="color: #4caf50;">{{ statistics().present }}</div>
+        <div class="stats-label">Anwesend</div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-number" style="color: #ff9800;">{{ statistics().excused }}</div>
+        <div class="stats-label">Entschuldigt</div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-number" style="color: #f44336;">{{ statistics().absent }}</div>
+        <div class="stats-label">Abwesend</div>
+      </div>
+    </div>
+    
+    <!-- Date tabs -->
+    @if (dateTabs().length > 0) {
+      <div class="day-tabs-container">
+        <mat-card appearance="outlined">
+          <mat-card-content>
+            <h3 class="section-title">Wählen Sie einen Tag aus</h3>
+            <mat-tab-group (selectedTabChange)="onTabChange($event)" animationDuration="0ms" class="day-tabs">
+              @for (day of dateTabs(); track day.dateString) {
+                <mat-tab [label]="day.shortDate">
+                  <div class="day-content">
+                    <!-- Update day title to show time range -->
+                    <h3 class="day-title">
+                      Appell vom {{ day.formattedDate }}
+                      <span class="time-info">({{ day.startTime }} - {{ day.endTime }} Uhr)</span>
+                    </h3>
+                    
+                    <!-- Search and filters -->
+                    <div class="filter-section">
+                      <div class="filter-controls">
+                        <mat-form-field appearance="outline">
+                          <mat-label>Status</mat-label>
+                          <mat-select [formControl]="statusFilterControl">
+                            <mat-option value="alle">Alle Status</mat-option>
+                            <mat-option value="anwesend">Anwesend</mat-option>
+                            <mat-option value="entschuldigt">Entschuldigt</mat-option>
+                            <mat-option value="abwesend">Abwesend</mat-option>
+                            <mat-option value="unbearbeitet">Unbearbeitet</mat-option>
+                          </mat-select>
+                        </mat-form-field>
+                        
+                        <mat-form-field appearance="outline">
+                          <mat-label>Suchen</mat-label>
+                          <input matInput [formControl]="searchControl" placeholder="Namen oder Grad...">
+                          <mat-icon matSuffix>search</mat-icon>
+                        </mat-form-field>
+                        
+                        <button mat-button color="primary" (click)="resetFilters()">
+                          <mat-icon>clear</mat-icon>
+                          Filter zurücksetzen
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <!-- Attendance table -->
+                    @if (dataSource().data.length === 0) {
+                      <div class="empty-state">
+                        <mat-icon>people_outline</mat-icon>
+                        <p>Keine Teilnehmer für diese Ausbildung zugewiesen</p>
+                        <p>Bitte weisen Sie zuerst Teilnehmer über die Ausbildungsdetails zu.</p>
+                      </div>
+                    } @else {
+                      <div class="responsive-table-container">
+                        <table mat-table [dataSource]="dataSource().data" class="appell-table">
+                          <!-- Grad -->
+                          <ng-container matColumnDef="grad">
+                            <th mat-header-cell *matHeaderCellDef>Grad</th>
+                            <td mat-cell *matCellDef="let teilnehmer">{{ teilnehmer.grunddaten.grad }}</td>
+                          </ng-container>
+
+                          <!-- Name -->
+                          <ng-container matColumnDef="name">
+                            <th mat-header-cell *matHeaderCellDef>Name</th>
+                            <td mat-cell *matCellDef="let teilnehmer" class="name-cell">
+                              <span class="person-name" (click)="viewPersonDetails(teilnehmer); $event.stopPropagation()">
+                                {{ teilnehmer.grunddaten.nachname }} {{ teilnehmer.grunddaten.vorname }}
+                                <mat-icon class="view-icon">visibility</mat-icon>
+                              </span>
+                            </td>
+                          </ng-container>
+
+                          <!-- Einteilung -->
+                          <ng-container matColumnDef="einteilung">
+                            <th mat-header-cell *matHeaderCellDef>Einteilung</th>
+                            <td mat-cell *matCellDef="let teilnehmer">
+                              Zug {{ teilnehmer.zivilschutz.einteilung.zug }}
+                              <span *ngIf="teilnehmer.zivilschutz.einteilung.gruppe">
+                                / {{ teilnehmer.zivilschutz.einteilung.gruppe }}
+                              </span>
+                            </td>
+                          </ng-container>
+
+                          <!-- Status -->
+                          <ng-container matColumnDef="status">
+                            <th mat-header-cell *matHeaderCellDef>Status</th>
+                            <td mat-cell *matCellDef="let teilnehmer" [ngClass]="getStatusClass(teilnehmer)" (click)="$event.stopPropagation()">
+                              <div class="status-buttons">
+                                <button 
+                                  mat-icon-button 
+                                  color="primary"
+                                  matTooltip="Anwesend"
+                                  [class.active]="getStatus(teilnehmer) === 'teilgenommen'"
+                                  (click)="updateStatus(teilnehmer, 'teilgenommen'); $event.stopPropagation()">
+                                  <mat-icon>check_circle</mat-icon>
+                                </button>
+                                
+                                <button 
+                                  mat-icon-button 
+                                  color="accent"
+                                  matTooltip="Entschuldigt"
+                                  [class.active]="getStatus(teilnehmer) === 'dispensiert'"
+                                  (click)="updateStatus(teilnehmer, 'dispensiert'); $event.stopPropagation()">
+                                  <mat-icon>assignment_late</mat-icon>
+                                </button>
+                                
+                                <button 
+                                  mat-icon-button 
+                                  color="warn"
+                                  matTooltip="Abwesend"
+                                  [class.active]="getStatus(teilnehmer) === 'nicht teilgenommen'"
+                                  (click)="updateStatus(teilnehmer, 'nicht teilgenommen'); $event.stopPropagation()">
+                                  <mat-icon>cancel</mat-icon>
+                                </button>
+                                
+                                <span class="status-text">{{ getStatusLabel(teilnehmer) }}</span>
+                              </div>
+                            </td>
+                          </ng-container>
+
+                          <!-- Bemerkung -->
+                          <ng-container matColumnDef="bemerkung">
+                            <th mat-header-cell *matHeaderCellDef>Bemerkung</th>
+                            <td mat-cell *matCellDef="let teilnehmer" (click)="$event.stopPropagation()">
+                              <mat-form-field class="bemerkung-field">
+                                <input 
+                                  matInput 
+                                  [value]="getBemerkung(teilnehmer)" 
+                                  (blur)="updateBemerkung(teilnehmer, $event)" 
+                                  placeholder="Bemerkung hinzufügen..."
+                                  (click)="$event.stopPropagation()">
+                              </mat-form-field>
+                            </td>
+                          </ng-container>
+
+                          <!-- Aktionen -->
+                          <ng-container matColumnDef="aktionen">
+                            <th mat-header-cell *matHeaderCellDef>Aktionen</th>
+                            <td mat-cell *matCellDef="let teilnehmer" class="actions-cell" (click)="$event.stopPropagation()">
+                              <button 
+                                mat-icon-button 
+                                [matMenuTriggerFor]="menu" 
+                                #menuTrigger="matMenuTrigger"
+                                (click)="openMenu($event, menuTrigger)">
+                                <mat-icon>more_vert</mat-icon>
+                              </button>
+                              <mat-menu #menu="matMenu">
+                                <button mat-menu-item (click)="viewPersonDetails(teilnehmer)">
+                                  <mat-icon>person</mat-icon>
+                                  <span>Person anzeigen</span>
+                                </button>
+                                
+                                <button mat-menu-item (click)="call(teilnehmer)">
+                                  <mat-icon>call</mat-icon>
+                                  <span>Anrufen</span>
+                                </button>
+                                
+                                <button mat-menu-item *ngIf="teilnehmer.kontaktdaten?.email" (click)="sendEmail(teilnehmer)">
+                                  <mat-icon>email</mat-icon>
+                                  <span>E-Mail schreiben</span>
+                                </button>
+                                
+                                <button mat-menu-item (click)="showEmergencyContacts(teilnehmer)">
+                                  <mat-icon>emergency</mat-icon>
+                                  <span>Notfallkontakte</span>
+                                </button>
+                              </mat-menu>
+                            </td>
+                          </ng-container>
+
+                          <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+                          <tr 
+                            mat-row 
+                            *matRowDef="let row; columns: displayedColumns;"
+                            class="person-row">
+                          </tr>
+                        </table>
+                      </div>
+                    }
+                  </div>
+                </mat-tab>
+              }
+            </mat-tab-group>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    } @else {
+      <div class="empty-state">
+        <mat-icon>event_busy</mat-icon>
+        <p>Keine Tage für diese Ausbildung definiert</p>
+        <p>Bitte überprüfen Sie die Datumseingaben in den Ausbildungsdetails.</p>
+      </div>
+    }
+
+    <!-- Action buttons -->
+    <div class="action-buttons">
+      <button mat-stroked-button (click)="goBack()">
+        <mat-icon>cancel</mat-icon>
+        Zurück
+      </button>
+      <button mat-raised-button color="primary" (click)="saveAndExit()">
+        <mat-icon>save</mat-icon>
+        Speichern und zurück
+      </button>
+    </div>
+  }
+</div>

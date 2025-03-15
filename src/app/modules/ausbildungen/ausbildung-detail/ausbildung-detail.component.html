@@ -64,11 +64,40 @@
           </div>
         </div>
 
+        <!-- Add the date display to the training detail card -->
+        <div class="ausbildung-info">
+          <div class="detail-row">
+            <span class="detail-label">Datum:</span>
+            <span class="detail-value date-value">
+              <mat-icon>event</mat-icon>
+              {{ formatDate(ausbildung()?.datum) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Show date range with time -->
+        <div class="ausbildung-info">
+          <div class="detail-row">
+            <span class="detail-label">Zeitraum:</span>
+            <span class="detail-value date-value">
+              <mat-icon>date_range</mat-icon>
+              {{ formatDateWithTime(ausbildung()?.startDatum, ausbildung()?.startZeit) }} - {{ formatDateWithTime(ausbildung()?.endDatum, ausbildung()?.endZeit) }}
+            </span>
+          </div>
+        </div>
+
         <!-- Action buttons -->
         <div class="action-button-group">
-          <button mat-raised-button color="primary" (click)="erfasseTeilnahme()" class="action-button">
-            <mat-icon>assignment_turned_in</mat-icon>
-            <span class="button-text">Teilnahmen erfassen</span>
+          <!-- Replace the "Teilnehmer verwalten" button with a dialog opener -->
+          <button mat-raised-button color="primary" (click)="openTeilnehmerDialog()" class="primary-action-button">
+            <mat-icon>people</mat-icon>
+            <span class="button-text">Teilnehmer verwalten</span>
+          </button>
+          
+          <!-- Add "Appell" button for attendance tracking -->
+          <button mat-raised-button color="primary" [routerLink]="['/ausbildungen', ausbildung()?.id, 'appell']" class="action-button">
+            <mat-icon>how_to_reg</mat-icon>
+            <span class="button-text">Appell durchführen</span>
           </button>
 
           <button mat-raised-button color="primary" (click)="generatePdfsForAllParticipants()" class="action-button">
@@ -89,6 +118,8 @@
               <span class="button-text">Löschen</span>
             </button>
           }
+          
+          <!-- Remove redundant "Anwesenheit erfassen" button -->
         </div>
       </mat-card-content>
     </mat-card>

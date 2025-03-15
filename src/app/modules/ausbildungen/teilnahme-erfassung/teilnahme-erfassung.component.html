@@ -1,25 +1,29 @@
 <!-- src/app/modules/ausbildungen/teilnahme-erfassung/teilnahme-erfassung.component.html -->
 <div class="teilnahme-erfassung-container">
-  <div class="page-navigation">
-    <button mat-button color="primary" class="back-button" (click)="goBack()" aria-label="Zurück zur Ausbildung">
+  <!-- Breadcrumb navigation with clearer labeling -->
+  <div class="breadcrumb">
+    <button mat-button color="primary" (click)="goBack()">
       <mat-icon>arrow_back</mat-icon>
-      <span>Zurück zur Ausbildung</span>
+      Zurück zur Ausbildungsdetails
     </button>
   </div>
   
-  <!-- Loading-State -->
+  <div class="page-header">
+    <h1 class="page-title">Teilnehmer verwalten</h1>
+    <p class="page-description">Hier können Sie Teilnehmer für diese Ausbildung zuweisen und deren Anwesenheit während des Appells erfassen.</p>
+  </div>
+
+  <!-- Loading indicator -->
   @if (isLoading()) {
-    <div class="loading-container" aria-live="polite">
+    <div class="loading-container">
       <mat-spinner diameter="40"></mat-spinner>
       <p>Daten werden geladen...</p>
     </div>
   } 
-  
-  <!-- Error-State -->
   @else if (!ausbildung()) {
-    <mat-card appearance="outlined" class="message-card error-card">
+    <mat-card appearance="outlined">
       <mat-card-content>
-        <div class="message-content">
+        <div class="error-message">
           <mat-icon>error</mat-icon>
           <p>Ausbildung nicht gefunden oder Fehler beim Laden der Daten.</p>
         </div>
@@ -27,16 +31,21 @@
     </mat-card>
   } 
   
-  <!-- Hauptinhalt -->
+  <!-- Main content -->
   @else {
     <!-- Header mit Ausbildungsinfo -->
     <mat-card appearance="outlined" class="header-card">
       <mat-card-content>
         <div class="ausbildung-info">
-          <h1 class="page-title">{{ ausbildung()!.titel }}</h1>
+          <h2 class="page-title">{{ ausbildung()!.titel }}</h2>
           <div class="info-details">
             <span class="typ-badge" [ngClass]="'typ-' + ausbildung()!.typ">{{ ausbildung()!.typ }}</span>
             <span class="year-text">{{ ausbildung()!.jahr }}</span>
+            <!-- Show training date prominently -->
+            <span class="date-badge" *ngIf="ausbildung()!.datum">
+              <mat-icon>event</mat-icon>
+              {{ formatDate(ausbildung()!.datum) }}
+            </span>
           </div>
         </div>
       </mat-card-content>
@@ -44,6 +53,10 @@
     
     <!-- Statistik-Übersicht -->
     <div class="statistics-bar">
+      <div class="stats-card">
+        <div class="stats-number">{{ selectedTeilnehmer().length }}</div>
+        <div class="stats-label">Teilnehmer gesamt</div>
+      </div>
       <div class="stats-card">
         <div class="stats-number">{{ getCountByStatus('anwesend') }}</div>
         <div class="stats-label">Anwesend</div>
@@ -54,142 +67,177 @@
       </div>
       <div class="stats-card">
         <div class="stats-number">{{ getCountByStatus('abwesend') }}</div>
-        <div class="stats-label">Unentschuldigt</div>
-      </div>
-      <div class="stats-card total">
-        <div class="stats-number">{{ teilnehmer.length }}</div>
-        <div class="stats-label">Gesamt</div>
+        <div class="stats-label">Abwesend</div>
       </div>
     </div>
     
-    <!-- Sucheingabe und Filter -->
-    <div class="search-filter-row">
-      <mat-form-field appearance="outline" class="search-field">
-        <mat-label>Suchen</mat-label>
-        <input matInput [formControl]="searchControl" placeholder="Nach Namen oder Grad suchen...">
-        <mat-icon matSuffix>search</mat-icon>
-      </mat-form-field>
+    <!-- Enhanced participant management section -->
+    <div class="action-panel">
+      <!-- Two tabs for the two phases -->
+      <div class="tabs-container">
+        <div class="tab active">
+          <mat-icon>people</mat-icon>
+          <span>Teilnehmer zuweisen</span>
+        </div>
+        <div class="tab">
+          <mat-icon>how_to_reg</mat-icon>
+          <span>Appell durchführen</span>
+        </div>
+      </div>
       
-      <mat-form-field appearance="outline" class="filter-field">
-        <mat-label>Status filtern</mat-label>
-        <mat-select [formControl]="statusFilterControl">
-          <mat-option value="alle">Alle anzeigen</mat-option>
-          <mat-option value="anwesend">Anwesend</mat-option>
-          <mat-option value="entschuldigt">Entschuldigt</mat-option>
-          <mat-option value="abwesend">Unentschuldigt</mat-option>
-          <mat-option value="unbearbeitet">Unbearbeitet</mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <div class="spacer"></div>
+      <!-- Phase explanation -->
+      <div class="phase-explanation">
+        <mat-icon color="primary">info</mat-icon>
+        <p>In dieser Phase können Sie Personen der Ausbildung zuweisen. Die eigentliche Anwesenheitskontrolle erfolgt später während des Appells.</p>
+      </div>
       
-      <button mat-raised-button color="primary" class="add-person-button" (click)="openAddPersonDialog()">
-        <mat-icon>person_add</mat-icon>
-        Person hinzufügen
-      </button>
-    </div>
+      <!-- Prominently placed add button -->
+      <div class="main-action">
+        <button mat-raised-button color="primary" class="large-button" (click)="openAddPersonDialog()">
+          <mat-icon>group_add</mat-icon>
+          Teilnehmer auswählen
+        </button>
+        <p class="action-hint">Wählen Sie hier die Personen aus, die an dieser Ausbildung teilnehmen sollen.</p>
+      </div>
 
-    <!-- Datum-Auswahl -->
-    <div class="date-selection">
-      <mat-form-field appearance="outline">
-        <mat-label>Datum</mat-label>
-        <input matInput [matDatepicker]="picker" [formControl]="datumControl">
-        <mat-hint>Datum des Appells</mat-hint>
-        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-        <mat-datepicker #picker></mat-datepicker>
-      </mat-form-field>
+      <!-- Date selection with explanation -->
+      <div class="date-selection">
+        <h3>Appell-Datum</h3>
+        <p class="date-hint">
+          <mat-icon>info</mat-icon>
+          Das Standard-Datum ist das Ausbildungsdatum. Bei Bedarf kann dies für den Appell geändert werden.
+        </p>
+        <mat-form-field appearance="outline">
+          <mat-label>Anwesenheitsdatum</mat-label>
+          <input matInput [matDatepicker]="picker" [formControl]="datumControl">
+          <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+        </mat-form-field>
+      </div>
+            
+      <!-- Filters section -->
+      <div class="filter-section">
+        <h3>Filter</h3>
+        <div class="filter-controls">
+          <mat-form-field appearance="outline">
+            <mat-label>Status</mat-label>
+            <mat-select [formControl]="statusFilterControl">
+              <mat-option value="alle">Alle Status</mat-option>
+              <mat-option value="anwesend">Anwesend</mat-option>
+              <mat-option value="entschuldigt">Entschuldigt</mat-option>
+              <mat-option value="abwesend">Abwesend</mat-option>
+              <mat-option value="unbearbeitet">Unbearbeitet</mat-option>
+            </mat-select>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline">
+            <mat-label>Suchen</mat-label>
+            <input matInput [formControl]="searchControl" placeholder="Namen oder Grad...">
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+          
+          <button mat-button color="primary" (click)="resetFilters()">
+            <mat-icon>clear</mat-icon>
+            Filter zurücksetzen
+          </button>
+        </div>
+      </div>
     </div>
     
     <!-- Teilnehmerliste -->
     <div class="teilnehmer-container">
-      @if (filteredTeilnehmer().length === 0) {
+      <h3>Zugewiesene Teilnehmer</h3>
+      
+      @if (dataSource.data.length === 0) {
         <div class="empty-state">
-          @if (teilnehmer.length === 0) {
-            <mat-icon>people_outline</mat-icon>
-            <p>Keine Teilnehmer für diese Ausbildung erfasst</p>
-            <button mat-raised-button color="primary" (click)="openAddPersonDialog()">
-              <mat-icon>person_add</mat-icon>
-              Person hinzufügen
-            </button>
-          } @else {
-            <mat-icon>filter_list</mat-icon>
-            <p>Keine Teilnehmer entsprechen den Filterkriterien</p>
-            <button mat-button color="primary" (click)="resetFilters()">
-              Filter zurücksetzen
-            </button>
-          }
+          <mat-icon>people_outline</mat-icon>
+          <p>Keine Teilnehmer für diese Ausbildung erfasst</p>
+          <button mat-raised-button color="primary" (click)="openAddPersonDialog()">
+            <mat-icon>person_add</mat-icon>
+            Teilnehmer auswählen
+          </button>
         </div>
       } @else {
         <div class="responsive-table-container">
-          <table mat-table [dataSource]="filteredTeilnehmer()" class="teilnehmer-table" aria-label="Teilnehmerliste">
-            <!-- Checkbox zum Auswählen -->
-            <ng-container matColumnDef="select">
-              <th mat-header-cell *matHeaderCellDef>
-                <mat-checkbox 
-                  (change)="$event ? toggleAllRows() : null"
-                  [checked]="selection.hasValue() && isAllSelected()"
-                  [indeterminate]="selection.hasValue() && !isAllSelected()">
-                </mat-checkbox>
-              </th>
-              <td mat-cell *matCellDef="let teilnehmer">
-                <mat-checkbox 
-                  (click)="$event.stopPropagation()"
-                  (change)="$event ? selection.toggle(teilnehmer) : null"
-                  [checked]="selection.isSelected(teilnehmer)">
-                </mat-checkbox>
-              </td>
-            </ng-container>
-            
+          <table mat-table [dataSource]="dataSource" class="teilnehmer-table" aria-label="Teilnehmerliste">
             <!-- Grad -->
             <ng-container matColumnDef="grad">
               <th mat-header-cell *matHeaderCellDef>Grad</th>
-              <td mat-cell *matCellDef="let teilnehmer">{{ teilnehmer.grad }}</td>
+              <td mat-cell *matCellDef="let teilnehmer">{{ teilnehmer.grunddaten.grad }}</td>
             </ng-container>
 
             <!-- Name -->
             <ng-container matColumnDef="name">
               <th mat-header-cell *matHeaderCellDef>Name</th>
               <td mat-cell *matCellDef="let teilnehmer" class="name-cell">
-                {{ teilnehmer.nachname }} {{ teilnehmer.vorname }}
+                <span class="person-name" (click)="viewPersonDetails(teilnehmer); $event.stopPropagation()">
+                  {{ teilnehmer.grunddaten.nachname }} {{ teilnehmer.grunddaten.vorname }}
+                  <mat-icon class="view-icon">visibility</mat-icon>
+                </span>
+                <span *ngIf="isNewlyAdded(teilnehmer.id)" class="new-badge">Neu</span>
               </td>
             </ng-container>
 
             <!-- Zug/Gruppe -->
             <ng-container matColumnDef="einteilung">
               <th mat-header-cell *matHeaderCellDef>Einteilung</th>
-              <td mat-cell *matCellDef="let teilnehmer" class="einteilung-cell">
-                Zug {{ teilnehmer.zug }}{{ teilnehmer.gruppe ? ', Gr. ' + teilnehmer.gruppe : '' }}
+              <td mat-cell *matCellDef="let teilnehmer">
+                Zug {{ teilnehmer.zivilschutz.einteilung.zug }}
+                <span *ngIf="teilnehmer.zivilschutz.einteilung.gruppe">
+                  / {{ teilnehmer.zivilschutz.einteilung.gruppe }}
+                </span>
               </td>
             </ng-container>
 
-            <!-- Anwesenheitsstatus mit Radio-Buttons -->
+            <!-- Status während Appell -->
             <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Status</th>
-              <td mat-cell *matCellDef="let teilnehmer" class="status-cell">
-                <mat-button-toggle-group [value]="teilnehmer.status" (change)="updateStatus(teilnehmer, $event.value)" class="status-toggle-group">
-                  <mat-button-toggle value="anwesend" class="status-toggle anwesend" matTooltip="Anwesend">
+              <th mat-header-cell *matHeaderCellDef>Appell-Status</th>
+              <td mat-cell *matCellDef="let teilnehmer" [ngClass]="getStatusClass(teilnehmer)" (click)="$event.stopPropagation()">
+                <div class="status-buttons">
+                  <!-- No status by default - attendance will be taken during roll call -->
+                  <button 
+                    mat-icon-button 
+                    color="primary"
+                    matTooltip="Anwesend"
+                    [class.active]="teilnehmer.teilnahmeInfo?.status === 'teilgenommen'"
+                    (click)="updateStatus(teilnehmer, 'teilgenommen'); $event.stopPropagation()">
                     <mat-icon>check_circle</mat-icon>
-                  </mat-button-toggle>
-                  <mat-button-toggle value="entschuldigt" class="status-toggle entschuldigt" matTooltip="Entschuldigt">
+                  </button>
+                  
+                  <button 
+                    mat-icon-button 
+                    color="accent"
+                    matTooltip="Entschuldigt"
+                    [class.active]="teilnehmer.teilnahmeInfo?.status === 'dispensiert'"
+                    (click)="updateStatus(teilnehmer, 'dispensiert'); $event.stopPropagation()">
                     <mat-icon>assignment_late</mat-icon>
-                  </mat-button-toggle>
-                  <mat-button-toggle value="abwesend" class="status-toggle abwesend" matTooltip="Unentschuldigt">
+                  </button>
+                  
+                  <button 
+                    mat-icon-button 
+                    color="warn"
+                    matTooltip="Abwesend"
+                    [class.active]="teilnehmer.teilnahmeInfo?.status === 'nicht teilgenommen'"
+                    (click)="updateStatus(teilnehmer, 'nicht teilgenommen'); $event.stopPropagation()">
                     <mat-icon>cancel</mat-icon>
-                  </mat-button-toggle>
-                </mat-button-toggle-group>
+                  </button>
+                  
+                  <span class="status-text">{{ getStatusLabel(teilnehmer) }}</span>
+                </div>
               </td>
             </ng-container>
 
             <!-- Bemerkung -->
             <ng-container matColumnDef="bemerkung">
               <th mat-header-cell *matHeaderCellDef>Bemerkung</th>
-              <td mat-cell *matCellDef="let teilnehmer" class="bemerkung-cell">
-                <mat-form-field appearance="outline" class="bemerkung-field">
+              <td mat-cell *matCellDef="let teilnehmer" (click)="$event.stopPropagation()">
+                <mat-form-field class="bemerkung-field">
                   <input 
                     matInput 
-                    [value]="teilnehmer.bemerkung || ''" 
+                    [value]="teilnehmer.teilnahmeInfo?.bemerkung || ''" 
                     (blur)="updateBemerkung(teilnehmer, $event)" 
-                    placeholder="Bemerkung hinzufügen...">
+                    placeholder="Bemerkung hinzufügen..."
+                    (click)="$event.stopPropagation()">
                 </mat-form-field>
               </td>
             </ng-container>
@@ -197,54 +245,71 @@
             <!-- Aktionen -->
             <ng-container matColumnDef="aktionen">
               <th mat-header-cell *matHeaderCellDef>Aktionen</th>
-              <td mat-cell *matCellDef="let teilnehmer" class="actions-cell">
-                <button mat-icon-button color="warn" (click)="entfernePersonVonAusbildung(teilnehmer)" matTooltip="Entfernen">
-                  <mat-icon>delete</mat-icon>
+              <td mat-cell *matCellDef="let teilnehmer" class="actions-cell" (click)="$event.stopPropagation()">
+                <button 
+                  mat-icon-button 
+                  [matMenuTriggerFor]="menu" 
+                  #menuTrigger="matMenuTrigger"
+                  (click)="openMenu($event, menuTrigger, teilnehmer)">
+                  <mat-icon>more_vert</mat-icon>
                 </button>
+                <mat-menu #menu="matMenu">
+                  <button mat-menu-item (click)="viewPersonDetails(teilnehmer)">
+                    <mat-icon>person</mat-icon>
+                    <span>Person anzeigen</span>
+                  </button>
+                  <button mat-menu-item (click)="entfernePersonVonAusbildung(teilnehmer)">
+                    <mat-icon>delete</mat-icon>
+                    <span>Von Ausbildung entfernen</span>
+                  </button>
+                  <button mat-menu-item (click)="generatePDF(teilnehmer)">
+                    <mat-icon>picture_as_pdf</mat-icon>
+                    <span>PDF generieren</span>
+                  </button>
+                  <button mat-menu-item *ngIf="teilnehmer.kontaktdaten?.email" (click)="sendEmail(teilnehmer)">
+                    <mat-icon>email</mat-icon>
+                    <span>E-Mail senden</span>
+                  </button>
+                </mat-menu>
               </td>
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns;" 
-                [ngClass]="{'highlight-row': highlightedPersonIds.includes(row.id)}"></tr>
+            <tr 
+              mat-row 
+              *matRowDef="let row; columns: displayedColumns;"
+              [ngClass]="{
+                'highlighted-row': highlightedPersonIds.includes(row.id),
+                'newly-added-row': isNewlyAdded(row.id)
+              }"
+              class="person-row">
+            </tr>
           </table>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="action-buttons">
+          <button mat-stroked-button (click)="goBack()">
+            <mat-icon>cancel</mat-icon>
+            Abbrechen
+          </button>
+          <button mat-raised-button color="primary" (click)="saveAndExit()">
+            <mat-icon>save</mat-icon>
+            Speichern und zurück
+          </button>
         </div>
       }
     </div>
-    
-    <!-- Aktionen für Massenbearbeitung (erscheint, wenn mind. eine Person ausgewählt ist) -->
-    @if (selection.hasValue()) {
-      <div class="bulk-actions">
-        <div class="selected-count">{{ selection.selected.length }} Personen ausgewählt</div>
-        <div class="bulk-buttons">
-          <button mat-raised-button color="primary" (click)="updateStatusForSelected('anwesend')">
-            <mat-icon>check_circle</mat-icon>
-            Alle anwesend
-          </button>
-          <button mat-raised-button color="accent" (click)="updateStatusForSelected('entschuldigt')">
-            <mat-icon>assignment_late</mat-icon>
-            Alle entschuldigt
-          </button>
-          <button mat-raised-button color="warn" (click)="updateStatusForSelected('abwesend')">
-            <mat-icon>cancel</mat-icon>
-            Alle abwesend
-          </button>
-          <button mat-stroked-button (click)="selection.clear()">
-            Auswahl aufheben
-          </button>
-        </div>
-      </div>
-    }
-    
-    <!-- Speichern und Abbrechen-Buttons -->
-    <div class="action-buttons">
-      <button mat-button color="basic" (click)="goBack()">
-        Abbrechen
-      </button>
-      <button mat-raised-button color="primary" (click)="saveTeilnahmen()" [disabled]="isSaving()">
-        <mat-icon>save</mat-icon>
-        {{ isSaving() ? 'Speichert...' : 'Änderungen speichern' }}
-      </button>
-    </div>
   }
+  
+  <!-- Floating action button for adding participants -->
+  <button 
+    mat-fab 
+    class="fab-button" 
+    color="accent" 
+    (click)="openAddPersonDialog()" 
+    matTooltip="Teilnehmer hinzufügen"
+    *ngIf="!isLoading() && ausbildung()">
+    <mat-icon>person_add</mat-icon>
+  </button>
 </div>

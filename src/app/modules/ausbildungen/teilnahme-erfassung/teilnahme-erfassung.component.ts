@@ -1,45 +1,63 @@
 // src/app/modules/ausbildungen/teilnahme-erfassung/teilnahme-erfassung.component.ts
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatTableModule, MatTableDataSource } from '@angular/material/table';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatButtonModule } from '@angular/material/button';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatCardModule } from '@angular/material/card';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatNativeDateModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatSelectModule } from '@angular/material/select';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { SelectionModel } from '@angular/cdk/collections';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
+import { SelectionModel } from '@angular/cdk/collections';
+import { signal } from '@angular/core';
 
-import { AusbildungService, PersonService, TeilnahmeService } from '../../../core/services';
-import { Ausbildung, Person, Ausbildungsteilnahme } from '../../../core/models';
+import { AusbildungService } from '../../../core/services/ausbildung.service';
+import { PersonService } from '../../../core/services/person.service';
+import { TeilnahmeService } from '../../../core/services/teilnahme.service';
+import { Ausbildung } from '../../../core/models/ausbildung.model';
+import { Person } from '../../../core/models/person.model';
+import { Ausbildungsteilnahme } from '../../../core/models/teilnahme.model';
+import { TeilnehmerSelectionDialogComponent } from '../teilnehmer-selection-dialog/teilnehmer-selection-dialog.component';
+
+interface TeilnehmerWithInfo extends Person {
+  teilnahmeInfo?: Ausbildungsteilnahme;
+  isNew?: boolean;
+}
 
 @Component({
   selector: 'app-teilnahme-erfassung',
   standalone: true,
   imports: [
     CommonModule,
+    RouterModule,
     ReactiveFormsModule,
-    MatTableModule,
-    MatCheckboxModule, 
-    MatDatepickerModule,
-    MatButtonModule,
-    MatInputModule,
-    MatFormFieldModule,
     MatCardModule,
+    MatTableModule,
+    MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
+    MatFormFieldModule,
+    MatInputModule,
     MatSelectModule,
-    MatButtonToggleModule,
-    MatTooltipModule
+    MatCheckboxModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    MatSnackBarModule,
+    MatProgressSpinnerModule,
+    MatChipsModule,
+    MatTooltipModule,
+    MatDialogModule,
+    MatMenuModule
   ],
   templateUrl: './teilnahme-erfassung.component.html',
   styleUrls: ['./teilnahme-erfassung.component.scss']
@@ -47,10 +65,11 @@ import { Ausbildung, Person, Ausbildungsteilnahme } from '../../../core/models';
 export class TeilnahmeErfassungComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private fb = inject(FormBuilder);
+  private dialog = inject(MatDialog);
   private ausbildungService = inject(AusbildungService);
   private personService = inject(PersonService);
   private teilnahmeService = inject(TeilnahmeService);
-  private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
 
   // Zustände
@@ -59,6 +78,9 @@ export class TeilnahmeErfassungComponent implements OnInit {
   teilnahmen = signal<Ausbildungsteilnahme[]>([]);
   isLoading = signal(true);
   isSaving = signal(false);
+  
+  // Selected participants - this will only contain participants that are actually added
+  selectedTeilnehmer = signal<TeilnehmerWithInfo[]>([]);
 
   // ID der Ausbildung
   ausbildungId: string | null = null;
@@ -71,16 +93,13 @@ export class TeilnahmeErfassungComponent implements OnInit {
   statusFilterControl = new FormControl('alle');
   datumControl = new FormControl(new Date(), Validators.required);
 
-  // Teilnehmerliste
-  teilnehmer: Person[] = [];
-  
-  // Table data - Removed duplicate declarations
-  displayedColumns: string[] = ['select', 'grad', 'name', 'einteilung', 'status', 'bemerkung', 'aktionen'];
-  dataSource = new MatTableDataSource<Person>([]);
-  selection = new SelectionModel<Person>(true, []);
+  // Table data
+  displayedColumns: string[] = ['grad', 'name', 'einteilung', 'status', 'bemerkung', 'aktionen'];
+  dataSource = new MatTableDataSource<TeilnehmerWithInfo>([]);
   
   // IDs der hervorgehobenen Personen
   highlightedPersonIds: string[] = [];
+  newlyAddedPersonIds: string[] = [];
   
   // Statusoptionen
   statusOptions = [
@@ -92,7 +111,6 @@ export class TeilnahmeErfassungComponent implements OnInit {
   constructor() {
     this.teilnahmeForm = this.fb.group({
       datum: [new Date(), Validators.required],
-      status: ['teilgenommen', Validators.required],
       bemerkung: ['']
     });
   }
@@ -111,11 +129,33 @@ export class TeilnahmeErfassungComponent implements OnInit {
 
     // Set up initial filter behavior
     this.searchControl.valueChanges.subscribe(() => {
-      this.dataSource.data = this.filteredTeilnehmer();
+      this.updateDataSource();
     });
 
     this.statusFilterControl.valueChanges.subscribe(() => {
-      this.dataSource.data = this.filteredTeilnehmer();
+      this.updateDataSource();
+    });
+    
+    // Connect datum form control to the main form
+    this.datumControl.valueChanges.subscribe(value => {
+      this.teilnahmeForm.patchValue({ datum: value });
+    });
+  }
+
+  /**
+   * Formats a date for display
+   */
+  formatDate(date: any): string {
+    if (!date) return '';
+    
+    const jsDate = typeof date.toDate === 'function' 
+      ? date.toDate() 
+      : new Date(date);
+      
+    return jsDate.toLocaleDateString('de-CH', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
     });
   }
 
@@ -136,21 +176,18 @@ export class TeilnahmeErfassungComponent implements OnInit {
         return;
       }
       
-      // Personen laden
-      await this.personService.loadPersonen();
-      const aktivPersonen = this.personService.personen().filter(p => p.zivilschutz?.status === 'aktiv');
-      this.personen.set(aktivPersonen);
-      this.teilnehmer = aktivPersonen;
+      // Set initial date from the training data if available
+      if (ausbildung.datum) {
+        const date = typeof ausbildung.datum.toDate === 'function' 
+          ? ausbildung.datum.toDate() 
+          : new Date(ausbildung.datum);
+          
+        this.datumControl.setValue(date);
+        this.teilnahmeForm.patchValue({ datum: date });
+      }
       
-      // Bestehende Teilnahmen für diese Ausbildung laden
-      const teilnahmen = await this.teilnahmeService.getTeilnahmenByAusbildung(ausbildungId);
-      this.teilnahmen.set(teilnahmen);
-      
-      // Datentabelle vorbereiten
-      this.dataSource.data = this.teilnehmer;
-      
-      // Vorauswahl basierend auf bestehenden Teilnahmen
-      this.vorauswählen(teilnahmen);
+      // Load participants data
+      await this.loadTeilnehmerData();
       
     } catch (error) {
       console.error('Fehler beim Laden der Daten:', error);
@@ -161,89 +198,55 @@ export class TeilnahmeErfassungComponent implements OnInit {
   }
   
   /**
-   * Markiert Personen, die bereits teilgenommen haben
+   * Lädt Teilnehmer und Teilnahmedaten
    */
-  private vorauswählen(teilnahmen: Ausbildungsteilnahme[]): void {
-    const teilnehmerIds = teilnahmen
-      .filter(t => t.status === 'teilgenommen')
-      .map(t => t.personId);
-    
-    this.personen().forEach(person => {
-      if (teilnehmerIds.includes(person.id)) {
-        this.selection.select(person);
-      }
-    });
-  }
-
-  /**
-   * Speichert die Teilnahmen
-   */
-  async saveTeilnahmen(): Promise<void> {
-    if (this.teilnahmeForm.invalid || !this.ausbildungId) {
-      return;
-    }
-
-    this.isSaving.set(true);
+  async loadTeilnehmerData(): Promise<void> {
+    if (!this.ausbildungId) return;
     
     try {
-      const { datum, status, bemerkung } = this.teilnahmeForm.value;
-      const selectedPersonenIds = this.selection.selected.map(person => person.id);
+      // Load all persons for potential selection
+      await this.personService.loadPersonen();
+      const aktivPersonen = this.personService.personen().filter(p => p.zivilschutz?.status === 'aktiv');
+      this.personen.set(aktivPersonen);
       
-      // Bestehende Teilnahmen für diese Ausbildung abrufen
-      const bestehendeIds = this.teilnahmen()
-        .map(teilnahme => teilnahme.personId);
+      // Load existing participations for this training
+      const teilnahmen = await this.teilnahmeService.getTeilnahmenByAusbildung(this.ausbildungId);
+      this.teilnahmen.set(teilnahmen);
       
-      // Für jede ausgewählte Person Teilnahme erstellen/aktualisieren
-      for (const personId of selectedPersonenIds) {
-        // Prüfen, ob für diese Person bereits eine Teilnahme besteht
-        const bestehendeTeilnahme = this.teilnahmen()
-          .find(t => t.personId === personId);
-        
-        if (bestehendeTeilnahme) {
-          // Teilnahme aktualisieren
-          await this.teilnahmeService.updateTeilnahme(bestehendeTeilnahme.id, {
-            datum,
-            status,
-            bemerkung
-          });
-        } else {
-          // Neue Teilnahme erstellen
-          await this.teilnahmeService.createTeilnahme({
-            personId,
-            ausbildungId: this.ausbildungId,
-            datum,
-            status,
-            bemerkung
+      // Create initial selected teilnehmer from existing teilnahmen
+      const initialTeilnehmer: TeilnehmerWithInfo[] = [];
+      
+      for (const teilnahme of teilnahmen) {
+        const person = aktivPersonen.find(p => p.id === teilnahme.personId);
+        if (person) {
+          initialTeilnehmer.push({
+            ...person,
+            teilnahmeInfo: teilnahme,
+            isNew: false
           });
         }
       }
       
-      // Für jede nicht ausgewählte Person, die aber eine Teilnahme hatte,
-      // Status auf "nicht teilgenommen" setzen
-      for (const personId of bestehendeIds) {
-        if (!selectedPersonenIds.includes(personId)) {
-          const bestehendeTeilnahme = this.teilnahmen()
-            .find(t => t.personId === personId);
-          
-          if (bestehendeTeilnahme) {
-            await this.teilnahmeService.updateTeilnahme(bestehendeTeilnahme.id, {
-              datum,
-              status: 'nicht teilgenommen',
-              bemerkung
-            });
-          }
-        }
-      }
+      // Set the selected teilnehmer
+      this.selectedTeilnehmer.set(initialTeilnehmer);
       
-      this.showSnackBar('Teilnahmen erfolgreich gespeichert');
-      this.router.navigate(['/ausbildungen', this.ausbildungId]);
-      
+      // Update data source
+      this.updateDataSource();
     } catch (error) {
-      console.error('Fehler beim Speichern der Teilnahmen:', error);
-      this.showSnackBar('Fehler beim Speichern der Teilnahmen');
-    } finally {
-      this.isSaving.set(false);
+      console.error('Fehler beim Laden der Teilnehmerdaten:', error);
+      this.showSnackBar('Fehler beim Laden der Teilnehmerdaten');
     }
+  }
+  
+  /**
+   * Aktualisiert die Datenquelle basierend auf den Filtern und Teilnahmedaten
+   */
+  updateDataSource(): void {
+    // Get filtered participants from the selected teilnehmer only
+    let filteredPersons = this.filteredTeilnehmer();
+    
+    // Update data source
+    this.dataSource.data = filteredPersons;
   }
 
   /**
@@ -258,50 +261,30 @@ export class TeilnahmeErfassungComponent implements OnInit {
   }
 
   /**
-   * Prüft, ob alle Personen ausgewählt sind
-   */
-  isAllSelected(): boolean {
-    const numSelected = this.selection.selected.length;
-    const numRows = this.dataSource.data.length;
-    return numSelected === numRows;
-  }
-
-  /**
-   * Wählt alle oder keine Personen aus
-   */
-  toggleAllRows(): void {
-    if (this.isAllSelected()) {
-      this.selection.clear();
-    } else {
-      this.selection.select(...this.dataSource.data);
-    }
-  }
-
-  /**
    * Zeigt eine Snackbar-Benachrichtigung an
    */
   private showSnackBar(message: string): void {
     this.snackBar.open(message, 'Schließen', {
       duration: 3000,
       horizontalPosition: 'center',
-      verticalPosition: 'bottom'
+      verticalPosition: 'bottom',
     });
   }
 
   /**
-   * Berechnet die Teilnehmerzahl pro Status
-   * Status-Mapping: 'teilgenommen' = anwesend, 'dispensiert' = entschuldigt, 'nicht teilgenommen' = abwesend
+   * Gibt die Anzahl der Teilnehmer für einen bestimmten Status zurück
    */
   getCountByStatus(status: string): number {
-    // Fix: Use teilnahmen() to get the array first, then filter
-    const teilnahmenArray = this.teilnahmen();
+    const teilnehmer = this.selectedTeilnehmer();
     
     if (status === 'anwesend') {
-      return teilnahmenArray.filter((t: Ausbildungsteilnahme) => t.status === 'teilgenommen').length;
+      return teilnehmer.filter(t => t.teilnahmeInfo?.status === 'teilgenommen').length;
     } else if (status === 'entschuldigt') {
-      return teilnahmenArray.filter((t: Ausbildungsteilnahme) => t.status === 'dispensiert').length;
+      return teilnehmer.filter(t => t.teilnahmeInfo?.status === 'dispensiert').length;
     } else if (status === 'abwesend') {
-      return teilnahmenArray.filter((t: Ausbildungsteilnahme) => t.status === 'nicht teilgenommen').length;
+      return teilnehmer.filter(t => t.teilnahmeInfo?.status === 'nicht teilgenommen').length;
+    } else if (status === 'unbearbeitet') {
+      return teilnehmer.filter(t => !t.teilnahmeInfo || !t.teilnahmeInfo.status).length;
     }
     return 0;
   }
@@ -309,9 +292,9 @@ export class TeilnahmeErfassungComponent implements OnInit {
   /**
    * Filtert Teilnehmer basierend auf Suche und Status-Filter
    */
-  filteredTeilnehmer(): Person[] {
-    // Start with all persons
-    let filteredPersons = [...this.teilnehmer];
+  filteredTeilnehmer(): TeilnehmerWithInfo[] {
+    // Start with all selected teilnehmer
+    let filteredPersons = [...this.selectedTeilnehmer()];
     
     // Apply search filter if there's a search term
     const searchTerm = this.searchControl.value?.toLowerCase() || '';
@@ -326,26 +309,22 @@ export class TeilnahmeErfassungComponent implements OnInit {
     // Apply status filter if not "alle"
     const statusFilter = this.statusFilterControl.value;
     if (statusFilter && statusFilter !== 'alle') {
-      const teilnahmenByPerson = new Map<string, string>();
-      
-      // Map person IDs to their status
-      this.teilnahmen().forEach(t => {
-        let status: string;
-        if (t.status === 'teilgenommen') status = 'anwesend';
-        else if (t.status === 'dispensiert') status = 'entschuldigt';
-        else if (t.status === 'nicht teilgenommen') status = 'abwesend';
-        else status = 'unbearbeitet';
-        
-        teilnahmenByPerson.set(t.personId, status);
-      });
-      
-      // Filter persons by their status
       filteredPersons = filteredPersons.filter(p => {
-        const status = teilnahmenByPerson.get(p.id);
-        if (statusFilter === 'unbearbeitet') {
-          return !status; // No teilnahme record = unbearbeitet
+        if (!p.teilnahmeInfo && statusFilter === 'unbearbeitet') {
+          return true;
+        } else if (!p.teilnahmeInfo) {
+          return false;
         }
-        return status === statusFilter;
+        
+        if (statusFilter === 'anwesend') {
+          return p.teilnahmeInfo.status === 'teilgenommen';
+        } else if (statusFilter === 'entschuldigt') {
+          return p.teilnahmeInfo.status === 'dispensiert';
+        } else if (statusFilter === 'abwesend') {
+          return p.teilnahmeInfo.status === 'nicht teilgenommen';
+        }
+        
+        return false;
       });
     }
     
@@ -364,54 +343,340 @@ export class TeilnahmeErfassungComponent implements OnInit {
    * Öffnet einen Dialog zum Hinzufügen von Personen zur Ausbildung
    */
   openAddPersonDialog(): void {
-    console.log('openAddPersonDialog triggered');
-    // Dialog-Logik hier später implementieren
-    this.showSnackBar('Funktion noch nicht implementiert');
+    if (!this.ausbildungId) return;
+    
+    // Alle aktiven Personen holen
+    const aktivPersonen = this.personService.personen().filter(p => p.zivilschutz?.status === 'aktiv');
+    
+    // Already selected person IDs for preselection
+    const preselectedPersonIds = this.selectedTeilnehmer().map(teilnehmer => teilnehmer.id);
+    
+    const dialogRef = this.dialog.open(TeilnehmerSelectionDialogComponent, {
+      width: '800px',
+      data: {
+        availablePersons: aktivPersonen,
+        preselectedPersonIds: preselectedPersonIds
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(async (selectedPersons: Person[]) => {
+      if (selectedPersons && selectedPersons.length > 0) {
+        await this.updateTeilnehmerSelection(selectedPersons);
+      }
+    });
+  }
+  
+  /**
+   * Aktualisiert die Teilnahmen basierend auf der Personenauswahl
+   */
+  private async updateTeilnehmerSelection(selectedPersons: Person[]): Promise<void> {
+    if (!this.ausbildungId || !this.teilnahmeForm.valid) return;
+    
+    this.isSaving.set(true);
+    
+    try {
+      const { datum } = this.teilnahmeForm.value;
+      const currentTeilnehmer = this.selectedTeilnehmer();
+      
+      // Find newly added persons (those in selectedPersons but not in currentTeilnehmer)
+      const newlyAdded: Person[] = selectedPersons.filter(person => 
+        !currentTeilnehmer.some(t => t.id === person.id)
+      );
+      
+      // Find removed persons (those in currentTeilnehmer but not in selectedPersons)
+      const removedTeilnehmer = currentTeilnehmer.filter(teilnehmer => 
+        !selectedPersons.some(p => p.id === teilnehmer.id)
+      );
+      
+      // Store the IDs of newly added persons
+      const newlyAddedIds = newlyAdded.map(p => p.id);
+      this.highlightedPersonIds = [...newlyAddedIds];
+      this.newlyAddedPersonIds = [...newlyAddedIds];
+      
+      // Create updated list of teilnehmer
+      const updatedTeilnehmer: TeilnehmerWithInfo[] = [];
+      
+      // First add existing teilnehmer that are still selected
+      currentTeilnehmer.forEach(teilnehmer => {
+        if (selectedPersons.some(p => p.id === teilnehmer.id)) {
+          updatedTeilnehmer.push(teilnehmer);
+        }
+      });
+      
+      // Then add newly added teilnehmer
+      for (const person of newlyAdded) {
+        const existing = this.teilnahmen().find(t => t.personId === person.id);
+        
+        if (existing) {
+          // Person already has a participation record
+          updatedTeilnehmer.push({
+            ...person,
+            teilnahmeInfo: existing,
+            isNew: true
+          });
+        } else {
+          // Create new participation record with default values
+          const newTeilnahmeId = await this.teilnahmeService.createTeilnahme({
+            personId: person.id,
+            ausbildungId: this.ausbildungId,
+            datum,
+            status: 'teilgenommen',  // Default to present
+            bemerkung: ''
+          });
+          
+          // Add to the teilnehmer list with the new record
+          updatedTeilnehmer.push({
+            ...person,
+            teilnahmeInfo: {
+              id: newTeilnahmeId,
+              personId: person.id,
+              ausbildungId: this.ausbildungId,
+              datum,
+              status: 'teilgenommen',
+              bemerkung: ''
+            },
+            isNew: true
+          });
+        }
+      }
+      
+      // Handle removed teilnehmer if needed
+      for (const teilnehmer of removedTeilnehmer) {
+        if (teilnehmer.teilnahmeInfo) {
+          // In a real application, you might want to delete these or mark them differently
+          await this.teilnahmeService.deleteTeilnahme(teilnehmer.teilnahmeInfo.id);
+        }
+      }
+      
+      // Update the selected teilnehmer and reload data
+      this.selectedTeilnehmer.set(updatedTeilnehmer);
+      this.updateDataSource();
+      
+      if (newlyAdded.length > 0) {
+        this.showSnackBar(`${newlyAdded.length} neue Teilnehmer hinzugefügt`);
+      } else {
+        this.showSnackBar('Teilnehmerliste aktualisiert');
+      }
+    } catch (error) {
+      console.error('Fehler beim Aktualisieren der Teilnehmer:', error);
+      this.showSnackBar('Fehler beim Aktualisieren der Teilnehmer');
+    } finally {
+      this.isSaving.set(false);
+      
+      // Clear highlighting after a delay
+      setTimeout(() => {
+        this.highlightedPersonIds = [];
+      }, 3000);
+    }
   }
 
   /**
    * Aktualisiert den Status eines einzelnen Teilnehmers
    */
-  updateStatus(person: Person, newStatus: string): void {
-    console.log('updateStatus', person, newStatus);
+  async updateStatus(person: TeilnehmerWithInfo, newStatus: string): Promise<void> {
+    if (!this.ausbildungId || !this.teilnahmeForm.valid) return;
     
-    // Status für Person updaten (später mit echter Service-Implementation ersetzen)
-    this.showSnackBar(`Status für ${person.grunddaten?.nachname} aktualisiert`);
+    try {
+      const { datum } = this.teilnahmeForm.value;
+      
+      if (person.teilnahmeInfo) {
+        // Update existing attendance
+        await this.teilnahmeService.updateTeilnahme(person.teilnahmeInfo.id, {
+          datum,
+          status: newStatus as 'teilgenommen' | 'nicht teilgenommen' | 'dispensiert',
+          bemerkung: person.teilnahmeInfo.bemerkung
+        });
+        
+        // Update the local data
+        person.teilnahmeInfo.status = newStatus as 'teilgenommen' | 'nicht teilgenommen' | 'dispensiert';
+        
+        // Update the data source
+        this.updateDataSource();
+        
+        this.showSnackBar(`Status für ${person.grunddaten?.nachname} aktualisiert`);
+      } else {
+        // Create new attendance record
+        const newId = await this.teilnahmeService.createTeilnahme({
+          personId: person.id,
+          ausbildungId: this.ausbildungId,
+          datum,
+          status: newStatus as 'teilgenommen' | 'nicht teilgenommen' | 'dispensiert',
+          bemerkung: ''
+        });
+        
+        // Update the local data
+        person.teilnahmeInfo = {
+          id: newId,
+          personId: person.id,
+          ausbildungId: this.ausbildungId,
+          datum,
+          status: newStatus as 'teilgenommen' | 'nicht teilgenommen' | 'dispensiert',
+          bemerkung: ''
+        };
+        
+        // Update the data source
+        this.updateDataSource();
+        
+        this.showSnackBar(`Status für ${person.grunddaten?.nachname} gesetzt`);
+      }
+    } catch (error) {
+      console.error('Fehler beim Aktualisieren des Status:', error);
+      this.showSnackBar('Fehler beim Aktualisieren des Status');
+    }
   }
 
   /**
    * Aktualisiert die Bemerkung eines Teilnehmers
    */
-  updateBemerkung(person: Person, event: Event): void {
+  async updateBemerkung(person: TeilnehmerWithInfo, event: Event): Promise<void> {
+    if (!this.ausbildungId || !this.teilnahmeForm.valid) return;
+    
     const input = event.target as HTMLInputElement;
     const bemerkung = input.value;
     
-    console.log('updateBemerkung', person, bemerkung);
-    
-    // Bemerkung für Person updaten (später mit echter Service-Implementation ersetzen)
-    if (bemerkung) {
-      this.showSnackBar(`Bemerkung für ${person.grunddaten?.nachname} aktualisiert`);
+    try {
+      const { datum } = this.teilnahmeForm.value;
+      
+      if (person.teilnahmeInfo) {
+        // Update existing attendance
+        await this.teilnahmeService.updateTeilnahme(person.teilnahmeInfo.id, {
+          datum,
+          bemerkung
+        });
+        
+        // Update local data
+        person.teilnahmeInfo.bemerkung = bemerkung;
+        
+        this.showSnackBar(`Bemerkung für ${person.grunddaten?.nachname} aktualisiert`);
+      }
+    } catch (error) {
+      console.error('Fehler beim Aktualisieren der Bemerkung:', error);
+      this.showSnackBar('Fehler beim Aktualisieren der Bemerkung');
     }
   }
 
   /**
    * Entfernt einen Teilnehmer aus der Ausbildung
    */
-  entfernePersonVonAusbildung(person: Person): void {
-    console.log('entfernePersonVonAusbildung', person);
-    
-    // Person aus Ausbildung entfernen (später mit echter Service-Implementation ersetzen)
-    this.showSnackBar(`${person.grunddaten?.nachname} wurde aus der Ausbildung entfernt`);
+  async entfernePersonVonAusbildung(person: TeilnehmerWithInfo): Promise<void> {
+    try {
+      if (person.teilnahmeInfo) {
+        await this.teilnahmeService.deleteTeilnahme(person.teilnahmeInfo.id);
+      }
+      
+      // Remove from selected teilnehmer
+      const updatedTeilnehmer = this.selectedTeilnehmer().filter(t => t.id !== person.id);
+      this.selectedTeilnehmer.set(updatedTeilnehmer);
+      
+      // Update data source
+      this.updateDataSource();
+      
+      this.showSnackBar(`${person.grunddaten?.nachname} wurde aus der Ausbildung entfernt`);
+    } catch (error) {
+      console.error('Fehler beim Entfernen des Teilnehmers:', error);
+      this.showSnackBar('Fehler beim Entfernen des Teilnehmers');
+    }
   }
 
   /**
-   * Updates status for all selected persons
+   * Gets CSS class based on participation status
    */
-  updateStatusForSelected(newStatus: string): void {
-    console.log('updateStatusForSelected', newStatus, this.selection.selected);
+  getStatusClass(person: TeilnehmerWithInfo): string {
+    if (!person.teilnahmeInfo) return '';
     
-    // Status für alle ausgewählten Personen aktualisieren
-    const count = this.selection.selected.length;
-    this.showSnackBar(`Status für ${count} Personen aktualisiert`);
+    switch (person.teilnahmeInfo.status) {
+      case 'teilgenommen': return 'status-anwesend';
+      case 'dispensiert': return 'status-entschuldigt';
+      case 'nicht teilgenommen': return 'status-abwesend';
+      default: return '';
+    }
+  }
+  
+  /**
+   * Gets status label for display
+   */
+  getStatusLabel(person: TeilnehmerWithInfo): string {
+    if (!person.teilnahmeInfo) return 'Unbearbeitet';
+    
+    switch (person.teilnahmeInfo.status) {
+      case 'teilgenommen': return 'Anwesend';
+      case 'dispensiert': return 'Entschuldigt';
+      case 'nicht teilgenommen': return 'Abwesend';
+      default: return 'Unbearbeitet';
+    }
+  }
+  
+  /**
+   * Save all changes and go back to detail page
+   */
+  async saveAndExit(): Promise<void> {
+    if (!this.ausbildungId) return;
+    
+    this.isSaving.set(true);
+    
+    try {
+      // Save any pending changes
+      await this.savePendingChanges();
+      
+      this.showSnackBar('Teilnehmerliste gespeichert');
+      this.router.navigate(['/ausbildungen', this.ausbildungId]);
+    } catch (error) {
+      console.error('Fehler beim Speichern:', error);
+      this.showSnackBar('Fehler beim Speichern');
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
+  
+  /**
+   * Save any pending changes to the database
+   */
+  private async savePendingChanges(): Promise<void> {
+    // Implement any needed logic to ensure all changes are saved
+    // This is just a placeholder in case we need to add specific save logic
+    return Promise.resolve();
+  }
+  
+  /**
+   * Navigate to person detail page
+   */
+  viewPersonDetails(person: Person): void {
+    this.router.navigate(['/personen', person.id]);
+  }
+  
+  /**
+   * Open context menu for a person
+   */
+  openMenu(event: MouseEvent, trigger: MatMenuTrigger, person: TeilnehmerWithInfo): void {
+    event.preventDefault();
+    event.stopPropagation();
+    trigger.openMenu();
+  }
+
+  /**
+   * Checks if a person was newly added
+   */
+  isNewlyAdded(personId: string): boolean {
+    return this.newlyAddedPersonIds.includes(personId);
+  }
+  
+  /**
+   * Generate PDF for person
+   */
+  generatePDF(person: TeilnehmerWithInfo): void {
+    // Implement PDF generation or call appropriate service
+    this.showSnackBar(`PDF für ${person.grunddaten.nachname} wird generiert...`);
+  }
+  
+  /**
+   * Send email to person
+   */
+  sendEmail(person: TeilnehmerWithInfo): void {
+    // Open email client or integrate with email service
+    if (person.kontaktdaten?.email) {
+      window.open(`mailto:${person.kontaktdaten.email}`);
+    } else {
+      this.showSnackBar('Keine E-Mail-Adresse hinterlegt');
+    }
   }
 }

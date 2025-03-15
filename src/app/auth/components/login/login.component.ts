@@ -17,6 +17,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+
+// Import Password Reset Dialog Component
+import { PasswordResetDialogComponent } from '../password-reset-dialog/password-reset-dialog.component';
 
 @Component({
   selector: 'app-login',
@@ -30,7 +34,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatDialogModule
   ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
@@ -41,6 +46,7 @@ export class LoginComponent {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
   
   // Formulardefinition
   loginForm: FormGroup = this.fb.group({
@@ -70,6 +76,7 @@ export class LoginComponent {
    */
   async onSubmit(): Promise<void> {
     if (this.loginForm.invalid) {
+      this.markFormGroupTouched(this.loginForm);
       return;
     }
     
@@ -88,15 +95,71 @@ export class LoginComponent {
         verticalPosition: 'bottom'
       });
       
-      // Nach erfolgreicher Anmeldung weiterleiten
-      const returnUrl = localStorage.getItem('returnUrl') || '/';
-      console.log('Redirecting to:', returnUrl);
-      localStorage.removeItem('returnUrl');
-      console.log('Redirecting to:', returnUrl);
-      this.router.navigateByUrl(returnUrl);
+      // Nach erfolgreicher Anmeldung direkt weiterleiten
+      // Verwende die setTimeout um sicherzustellen dass Angular die Navigation ausführt
+      // nach dem aktuellen Durchlauf des Change Detection Cycles
+      setTimeout(() => {
+        const returnUrl = localStorage.getItem('returnUrl') || '/';
+        console.log('Redirecting to:', returnUrl);
+        localStorage.removeItem('returnUrl');
+        this.router.navigateByUrl(returnUrl);
+      }, 0);
     } catch (error) {
       // Fehlermeldung anzeigen
       this.errorMessage.set(this.authService.error() || 'Anmeldung fehlgeschlagen');
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+  
+  /**
+   * Mark all form controls as touched to trigger validation errors
+   */
+  private markFormGroupTouched(formGroup: FormGroup): void {
+    Object.values(formGroup.controls).forEach(control => {
+      control.markAsTouched();
+      if (control instanceof FormGroup) {
+        this.markFormGroupTouched(control);
+      }
+    });
+  }
+  
+  /**
+   * Navigate to registration page
+   */
+  goToRegister(): void {
+    this.router.navigate(['/register']);
+  }
+  
+  /**
+   * Open password reset dialog
+   */
+  openPasswordResetDialog(): void {
+    const dialogRef = this.dialog.open(PasswordResetDialogComponent, {
+      width: '400px'
+    });
+  
+    dialogRef.afterClosed().subscribe(email => {
+      if (email) {
+        this.sendPasswordResetEmail(email);
+      }
+    });
+  }
+  
+  /**
+   * Send password reset email
+   */
+  private async sendPasswordResetEmail(email: string): Promise<void> {
+    try {
+      this.isLoading.set(true);
+      await this.authService.sendPasswordResetEmail(email);
+      this.snackBar.open(
+        'Password-Reset-E-Mail gesendet. Bitte überprüfen Sie Ihren Posteingang.',
+        'Schließen',
+        { duration: 5000 }
+      );
+    } catch (error) {
+      this.errorMessage.set(this.authService.error() || 'Fehler beim Senden der Password-Reset-E-Mail');
     } finally {
       this.isLoading.set(false);
     }

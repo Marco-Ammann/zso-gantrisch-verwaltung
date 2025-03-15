@@ -4,6 +4,7 @@ import { FirebaseService } from './firebase.service';
 import { Notfallkontakt } from '../models/notfallkontakt.model';
 import { PersonService } from './person.service';
 import { toObservable } from '@angular/core/rxjs-interop';
+import { Firestore, doc, getDoc } from '@angular/fire/firestore';
 
 @Injectable({
   providedIn: 'root'
@@ -11,6 +12,7 @@ import { toObservable } from '@angular/core/rxjs-interop';
 export class NotfallkontaktService {
   private firebaseService = inject(FirebaseService);
   private personService = inject(PersonService);
+  private firestore = inject(Firestore);
   
   private collectionName = 'notfallkontakte';
   
@@ -155,5 +157,27 @@ export class NotfallkontaktService {
    */
   selectKontakt(kontakt: Notfallkontakt | null): void {
     this._selectedKontakt.set(kontakt);
+  }
+
+  /**
+   * Loads emergency contacts for a specific person
+   * @param personId ID of the person
+   * @returns Array of emergency contacts
+   */
+  async getNotfallkontakteByPerson(personId: string): Promise<Notfallkontakt[]> {
+    try {
+      const personDocRef = doc(this.firestore, 'personen', personId);
+      const personSnapshot = await getDoc(personDocRef);
+      
+      if (personSnapshot.exists()) {
+        const personData = personSnapshot.data();
+        return personData['notfallkontakte'] || [];
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error loading emergency contacts:', error);
+      throw error;
+    }
   }
 }

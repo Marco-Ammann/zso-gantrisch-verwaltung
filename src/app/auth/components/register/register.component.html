@@ -1,0 +1,137 @@
+<div class="register-container">
+  <mat-card class="register-card">
+    <mat-card-header>
+      <mat-card-title>ZSO Gantrisch Verwaltungssystem</mat-card-title>
+      <mat-card-subtitle>Neues Benutzerkonto erstellen</mat-card-subtitle>
+    </mat-card-header>
+    
+    <mat-card-content>
+      @if (registrationSuccess()) {
+        <div class="success-message">
+          <mat-icon>check_circle</mat-icon>
+          <div class="success-text">
+            <h3>Registrierung erfolgreich!</h3>
+            <p>Bitte überprüfen Sie Ihre E-Mail-Adresse. Wir haben Ihnen einen Bestätigungslink geschickt.</p>
+            <p>Nach der Bestätigung Ihrer E-Mail können Sie sich anmelden.</p>
+          </div>
+        </div>
+        
+        <button 
+          mat-raised-button 
+          color="primary" 
+          (click)="goToLogin()" 
+          class="back-to-login-button">
+          <mat-icon>login</mat-icon>
+          Zur Anmeldung
+        </button>
+      } @else {
+        <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+          <!-- Fehlermeldung -->
+          @if (errorMessage()) {
+            <div class="error-message">
+              <mat-icon>error</mat-icon>
+              <span>{{ errorMessage() }}</span>
+            </div>
+          }
+          
+          <!-- E-Mail-Feld -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>E-Mail</mat-label>
+            <input 
+              matInput 
+              type="email" 
+              formControlName="email" 
+              placeholder="beispiel@email.ch"
+              autocomplete="email">
+            <mat-icon matPrefix>email</mat-icon>
+            @if (isFieldInvalid('email')) {
+              <mat-error>{{ getErrorMessage('email') }}</mat-error>
+            }
+          </mat-form-field>
+          
+          <!-- Passwort-Feld -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Passwort</mat-label>
+            <input 
+              matInput 
+              [type]="hidePassword() ? 'password' : 'text'" 
+              formControlName="password"
+              autocomplete="new-password">
+            <mat-icon matPrefix>lock</mat-icon>
+            <button 
+              mat-icon-button 
+              type="button"
+              matSuffix 
+              (click)="togglePasswordVisibility()">
+              <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+            @if (isFieldInvalid('password')) {
+              <mat-error>{{ getErrorMessage('password') }}</mat-error>
+            }
+            <mat-hint>Mindestens 8 Zeichen</mat-hint>
+          </mat-form-field>
+          
+          <!-- Passwort bestätigen -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Passwort bestätigen</mat-label>
+            <input 
+              matInput 
+              [type]="hideConfirmPassword() ? 'password' : 'text'" 
+              formControlName="confirmPassword"
+              autocomplete="new-password">
+            <mat-icon matPrefix>lock</mat-icon>
+            <button 
+              mat-icon-button 
+              type="button"
+              matSuffix 
+              (click)="toggleConfirmPasswordVisibility()">
+              <mat-icon>{{ hideConfirmPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+            @if (isFieldInvalid('confirmPassword')) {
+              <mat-error>{{ getErrorMessage('confirmPassword') }}</mat-error>
+            }
+          </mat-form-field>
+          
+          <!-- Register Button -->
+          <div class="button-container">
+            <button 
+              mat-raised-button 
+              color="primary" 
+              type="submit" 
+              [disabled]="registerForm.invalid || isLoading()"
+              class="register-button">
+              @if (isLoading()) {
+                <mat-spinner diameter="24"></mat-spinner>
+                <span class="button-text">Registrieren...</span>
+              } @else {
+                <ng-container>
+                  <mat-icon>person_add</mat-icon>
+                  <span class="button-text">Registrieren</span>
+                </ng-container>
+              }
+            </button>
+          </div>
+        </form>
+        
+        <!-- Back to login link -->
+        <div class="login-link">
+          <p>Bereits registriert?</p>
+          <button 
+            mat-stroked-button 
+            color="primary"
+            (click)="goToLogin()" 
+            class="login-button">
+            <mat-icon>login</mat-icon>
+            <span>Zur Anmeldung</span>
+          </button>
+        </div>
+      }
+    </mat-card-content>
+    
+    <mat-card-footer>
+      <div class="footer-text">
+        Bei Problemen wenden Sie sich bitte an den Administrator.
+      </div>
+    </mat-card-footer>
+  </mat-card>
+</div>

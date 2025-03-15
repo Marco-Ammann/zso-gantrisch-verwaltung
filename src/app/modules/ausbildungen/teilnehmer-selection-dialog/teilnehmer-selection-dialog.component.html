@@ -1,0 +1,85 @@
+<h1 mat-dialog-title>Teilnehmer auswählen</h1>
+<div mat-dialog-content>
+  <div class="search-container">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Suchen</mat-label>
+      <input matInput [formControl]="searchControl" placeholder="Namen, Grad, Funktion...">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+  </div>
+  
+  <div class="table-container">
+    <table mat-table [dataSource]="filteredPersons" class="teilnehmer-table" matSort (matSortChange)="sortData($event)">
+      
+      <!-- Checkbox Column -->
+      <ng-container matColumnDef="select">
+        <th mat-header-cell *matHeaderCellDef>
+          <mat-checkbox 
+            (change)="$event ? masterToggle() : null"
+            [checked]="selection.hasValue() && isAllSelected()"
+            [indeterminate]="selection.hasValue() && !isAllSelected()"
+            [aria-label]="checkboxLabel()">
+          </mat-checkbox>
+        </th>
+        <td mat-cell *matCellDef="let row">
+          <mat-checkbox 
+            (click)="$event.stopPropagation()"
+            (change)="$event ? selection.toggle(row) : null"
+            [checked]="selection.isSelected(row)"
+            [aria-label]="checkboxLabel(row)">
+          </mat-checkbox>
+        </td>
+      </ng-container>
+
+      <!-- Grad Column -->
+      <ng-container matColumnDef="grad">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Grad</th>
+        <td mat-cell *matCellDef="let person">{{ person.grunddaten.grad }}</td>
+      </ng-container>
+
+      <!-- Name Column -->
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
+        <td mat-cell *matCellDef="let person">{{ person.grunddaten.nachname }} {{ person.grunddaten.vorname }}</td>
+      </ng-container>
+
+      <!-- Zug Column -->
+      <ng-container matColumnDef="zug">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Zug</th>
+        <td mat-cell *matCellDef="let person">{{ person.zivilschutz.einteilung.zug }}</td>
+      </ng-container>
+
+      <!-- Funktion Column -->
+      <ng-container matColumnDef="funktion">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Funktion</th>
+        <td mat-cell *matCellDef="let person">{{ person.grunddaten.funktion }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+      <tr 
+        mat-row 
+        *matRowDef="let row; columns: displayedColumns;"
+        (click)="selection.toggle(row)"
+        [class.selected-row]="selection.isSelected(row)">
+      </tr>
+      
+      <!-- No data message -->
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell empty-row" [attr.colspan]="displayedColumns.length">
+          Keine Personen gefunden.
+        </td>
+      </tr>
+    </table>
+  </div>
+  
+  <div class="selection-summary" *ngIf="selection.selected.length > 0">
+    {{ selection.selected.length }} Personen ausgewählt
+  </div>
+</div>
+<div mat-dialog-actions>
+  <button mat-button (click)="onCancel()" [disabled]="isSaving">Abbrechen</button>
+  <button mat-raised-button color="primary" (click)="onConfirm()" [disabled]="isSaving">
+    <mat-spinner diameter="20" *ngIf="isSaving"></mat-spinner>
+    <span *ngIf="!isSaving">Bestätigen</span>
+  </button>
+</div>

@@ -111,10 +111,320 @@
   }
 
 .teilnahme-erfassung-container {
-  padding: 1rem;
+  padding: 16px;
   max-width: 1200px;
   margin: 0 auto;
-  width: 100%;
+  position: relative;  // For the FAB positioning
+  
+  .page-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+    
+    .back-button {
+      margin-right: 8px;
+    }
+    
+    .page-title {
+      margin: 0;
+      font-size: 24px;
+    }
+  }
+  
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    
+    p {
+      margin-top: 16px;
+      color: #666;
+    }
+  }
+  
+  .error-message {
+    display: flex;
+    align-items: center;
+    color: #f44336;
+    
+    mat-icon {
+      margin-right: 8px;
+    }
+  }
+  
+  .header-card {
+    margin-bottom: 16px;
+    
+    .ausbildung-info {
+      display: flex;
+      flex-direction: column;
+      
+      .page-title {
+        margin: 0 0 8px 0;
+        font-size: 24px;
+      }
+      
+      .info-details {
+        display: flex;
+        align-items: center;
+        
+        .typ-badge {
+          display: inline-block;
+          padding: 4px 8px;
+          border-radius: 4px;
+          margin-right: 16px;
+          font-weight: 500;
+          font-size: 14px;
+          
+          &.typ-WK {
+            background-color: #bbdefb;
+            color: #0d47a1;
+          }
+          
+          &.typ-LG {
+            background-color: #c8e6c9;
+            color: #1b5e20;
+          }
+          
+          &.typ-KVK {
+            background-color: #ffecb3;
+            color: #ff6f00;
+          }
+          
+          &.typ-Übung {
+            background-color: #e1bee7;
+            color: #4a148c;
+          }
+          
+          &.typ-Kurs {
+            background-color: #d1c4e9;
+            color: #311b92;
+          }
+        }
+        
+        .year-text {
+          font-weight: 500;
+          color: #666;
+        }
+      }
+    }
+  }
+  
+  .statistics-bar {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    
+    .stats-card {
+      flex: 1;
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      
+      .stats-number {
+        font-size: 32px;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 8px;
+      }
+      
+      .stats-label {
+        font-size: 14px;
+        color: #666;
+      }
+      
+      &:nth-child(1) .stats-number {
+        color: #4caf50; // Green for present
+      }
+      
+      &:nth-child(2) .stats-number {
+        color: #ff9800; // Orange for excused
+      }
+      
+      &:nth-child(3) .stats-number {
+        color: #f44336; // Red for absent
+      }
+      
+      &:nth-child(4) .stats-number {
+        color: #9e9e9e; // Gray for not processed
+      }
+    }
+  }
+  
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 16px;
+    
+    .filter-section {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      
+      mat-form-field {
+        width: 200px;
+      }
+    }
+  }
+  
+  .date-selection {
+    margin-bottom: 16px;
+    
+    mat-form-field {
+      width: 200px;
+    }
+  }
+  
+  .teilnehmer-container {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      
+      mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 16px;
+        color: #9e9e9e;
+      }
+      
+      p {
+        margin-bottom: 16px;
+        color: #666;
+      }
+    }
+    
+    .responsive-table-container {
+      overflow-x: auto;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    
+    .teilnehmer-table {
+      width: 100%;
+      
+      .name-cell {
+        font-weight: 500;
+      }
+      
+      .status-buttons {
+        display: flex;
+        align-items: center;
+        
+        button {
+          opacity: 0.5;
+          
+          &.active {
+            opacity: 1;
+          }
+        }
+        
+        .status-text {
+          margin-left: 8px;
+          font-weight: 500;
+        }
+      }
+      
+      .bemerkung-field {
+        width: 100%;
+      }
+      
+      .actions-cell {
+        text-align: right;
+      }
+      
+      td.status-anwesend {
+        .status-text {
+          color: #4caf50;
+        }
+      }
+      
+      td.status-entschuldigt {
+        .status-text {
+          color: #ff9800;
+        }
+      }
+      
+      td.status-abwesend {
+        .status-text {
+          color: #f44336;
+        }
+      }
+      
+      tr.highlighted-row {
+        background-color: rgba(63, 81, 181, 0.08);
+        animation: highlight-fade 2s forwards;
+      }
+      
+      @keyframes highlight-fade {
+        0% {
+          background-color: rgba(63, 81, 181, 0.2);
+        }
+        100% {
+          background-color: rgba(63, 81, 181, 0.05);
+        }
+      }
+    }
+    
+    .action-buttons {
+      display: flex;
+      justify-content: flex-end;
+      padding: 16px;
+    }
+  }
+  
+  // Responsive styles
+  @media (max-width: 768px) {
+    .statistics-bar {
+      flex-wrap: wrap;
+      
+      .stats-card {
+        min-width: calc(50% - 16px);
+      }
+    }
+    
+    .toolbar {
+      flex-direction: column;
+      align-items: stretch;
+      
+      .filter-section {
+        flex-direction: column;
+        
+        mat-form-field {
+          width: 100%;
+        }
+      }
+    }
+  }
+}
+
+// Fix for the bemerkung input field
+.mat-mdc-form-field.bemerkung-field .mat-mdc-text-field-wrapper {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.mat-mdc-form-field.bemerkung-field .mat-mdc-form-field-flex {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.mat-mdc-form-field.bemerkung-field .mdc-text-field--outlined {
+  --mdc-outlined-text-field-container-height: 36px;
 }
 
 .page-navigation {
@@ -420,6 +730,29 @@
   gap: 1rem;
 }
 
+.new-badge {
+  background-color: #4caf50;
+  color: white;
+  border-radius: 12px;
+  font-size: 10px;
+  padding: 2px 6px;
+  margin-left: 8px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.person-row {
+  cursor: pointer;
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+  
+  &.newly-added-row {
+    background-color: rgba(76, 175, 80, 0.1);
+  }
+}
+
 @media (max-width: 768px) {
   .search-filter-row {
     flex-direction: column;
@@ -463,5 +796,248 @@
     button {
       width: 100%;
     }
+  }
+}
+
+.breadcrumb {
+  margin-bottom: 16px;
+}
+
+.page-header {
+  margin-bottom: 16px;
+  
+  .page-title {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+    font-weight: 500;
+  }
+  
+  .page-description {
+    color: #666;
+    margin: 0;
+  }
+}
+
+// Styling for the date badge
+.date-badge {
+  display: flex;
+  align-items: center;
+  background-color: #e8f5e9;
+  color: #1b5e20;
+  padding: 4px 8px;
+  border-radius: 16px;
+  font-weight: 500;
+  
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+  }
+}
+
+// Action panel for participant management
+.action-panel {
+  background-color: #f5f5f5;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  
+  h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 18px;
+    font-weight: 500;
+    color: #333;
+  }
+  
+  .main-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 24px;
+    
+    .large-button {
+      font-size: 16px;
+      padding: 12px 24px;
+      
+      mat-icon {
+        margin-right: 8px;
+        font-size: 24px;
+        height: 24px;
+        width: 24px;
+      }
+    }
+    
+    .action-hint {
+      margin-top: 8px;
+      color: #666;
+      font-style: italic;
+    }
+  }
+  
+  .date-selection {
+    margin-bottom: 16px;
+    
+    .date-hint {
+      display: flex;
+      align-items: center;
+      color: #666;
+      margin-bottom: 8px;
+      
+      mat-icon {
+        margin-right: 8px;
+        font-size: 18px;
+        color: #1976d2;
+      }
+    }
+  }
+  
+  .filter-section {
+    h3 {
+      margin-bottom: 8px;
+    }
+    
+    .filter-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      
+      mat-form-field {
+        flex: 1;
+        min-width: 150px;
+      }
+    }
+  }
+}
+
+// Styles for clickable person name
+.person-name {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    
+    .view-icon {
+      opacity: 1;
+    }
+  }
+  
+  .view-icon {
+    margin-left: 8px;
+    opacity: 0;
+    font-size: 16px;
+    height: 16px;
+    width: 16px;
+    transition: opacity 0.2s;
+  }
+}
+
+// Floating action button for adding participants
+.fab-button {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100;
+}
+
+// Improving action buttons
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 16px;
+  
+  button {
+    min-width: 150px;
+  }
+}
+
+// Adding section headers
+.teilnehmer-container {
+  h3 {
+    padding: 16px;
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: #333;
+    border-bottom: 1px solid #eee;
+  }
+}
+
+// Update responsive styles
+@media (max-width: 768px) {
+  // ...existing responsive styles...
+  
+  .action-panel {
+    .filter-controls {
+      flex-direction: column;
+      
+      mat-form-field {
+        width: 100%;
+      }
+    }
+  }
+  
+  .fab-button {
+    bottom: 16px;
+    right: 16px;
+  }
+}
+
+// Tabs for phase selection
+.tabs-container {
+  display: flex;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  
+  .tab {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    margin-right: 8px;
+    border-radius: 4px 4px 0 0;
+    cursor: pointer;
+    
+    mat-icon {
+      margin-right: 8px;
+    }
+    
+    &.active {
+      background-color: #e3f2fd;
+      color: #1565c0;
+      font-weight: 500;
+      border-bottom: 2px solid #1976d2;
+    }
+    
+    &:not(.active):hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+  }
+}
+
+// Phase explanation
+.phase-explanation {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px;
+  background-color: #e3f2fd;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  
+  mat-icon {
+    margin-right: 8px;
+    color: #1976d2;
+  }
+  
+  p {
+    margin: 0;
+    color: #333;
+    line-height: 1.5;
   }
 }

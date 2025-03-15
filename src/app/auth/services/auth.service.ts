@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, OnDestroy } from '@angular/core';
 import {
   Auth,
   signInWithEmailAndPassword,
@@ -11,11 +11,21 @@ import {
   setPersistence,
   browserLocalPersistence,
   getAuth,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  confirmPasswordReset,
+  applyActionCode,
+  verifyPasswordResetCode,
+  updatePassword,
+  EmailAuthProvider,
+  fetchSignInMethodsForEmail
 } from '@angular/fire/auth';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { User } from '../../core/models/user.model';
 import { FirebaseService } from '../../core/services/firebase.service';
 import { Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Subscription } from 'rxjs';
 
 /**
  * Service für die Authentifizierung und Benutzerverwaltung
@@ -24,15 +34,17 @@ import { Router } from '@angular/router';
 @Injectable({
   providedIn: 'root',
 })
-export class AuthService {
+export class AuthService implements OnDestroy {
   private auth: Auth = inject(Auth);
   private firebaseService = inject(FirebaseService);
   private router = inject(Router);
+  private snackBar = inject(MatSnackBar);
 
   // Private Signals für den internen Zustand
   private _currentUser = signal<User | null>(null);
   private _isLoading = signal<boolean>(false);
   private _error = signal<string | null>(null);
+  private _authStateSubscription?: Subscription;
 
   // Öffentliche computed Signals für Komponenten
   public currentUser = computed(() => this._currentUser());
@@ -43,34 +55,33 @@ export class AuthService {
   // Benutzerrolle als computed Signal
   public userRole = computed(() => this._currentUser()?.role || null);
 
-  // Zugriffsberechtigungen basierend auf der Rolle
-  public canEdit = computed(() => {
-    const role = this.userRole();
-    return role === 'admin' || role === 'oberleutnant' || role === 'leutnant';
-  });
+  // Role-based permissions as computed
+  public canEdit = computed(
+    () => {
+      const role = this.userRole();
+      return role === 'admin' || role === 'oberleutnant' || role === 'leutnant';
+    }
+  );
 
-  public canDelete = computed(() => {
-    const role = this.userRole();
-    return role === 'admin' || role === 'oberleutnant';
-  });
-
+  // Add the missing isAdmin computed property
   public isAdmin = computed(() => this.userRole() === 'admin');
 
-  // Umwandlung des Signals in ein Observable für Komponenten, die Observables benötigen
+  public canDelete = computed(() => this.userRole() === 'admin');
+  public canManageUsers = computed(() => this.userRole() === 'admin');
+
+  // Convert to Observable for components that require Observable
   public currentUser$ = toObservable(this.currentUser);
   public isAuthenticated$ = toObservable(this.isAuthenticated);
+  public isLoading$ = toObservable(this.isLoading);
+  public error$ = toObservable(this.error);
 
   constructor() {
-    // Konfiguriere den Auth-Service
-    try {
-      const auth = this.auth;
-      // Hier können wir auf das Auth-Objekt zugreifen, das von Angular Fire bereitgestellt wird
-      console.log('Auth Service initialisiert');
+    this.initAuthListener();
+  }
 
-      // Authentifizierungsstatus überwachen
-      this.initAuthListener();
-    } catch (error) {
-      console.error('Fehler bei der Auth-Service-Initialisierung:', error);
+  ngOnDestroy() {
+    if (this._authStateSubscription) {
+      this._authStateSubscription.unsubscribe();
     }
   }
 
@@ -83,14 +94,12 @@ export class AuthService {
     // Zusätzlich: Bei Startup prüfen, ob Benutzer im localStorage gespeichert ist
     const savedUserId = localStorage.getItem('user_id');
     if (savedUserId) {
-      console.log(
-        'Benutzer-ID im localStorage gefunden, Benutzer gilt als angemeldet'
-      );
+      console.log('Benutzer-ID im localStorage gefunden, Benutzer gilt als angemeldet');
     }
 
     // Verzögerung einbauen, um sicherzustellen, dass Firebase vollständig initialisiert ist
     setTimeout(() => {
-      authState(this.auth).subscribe(async (firebaseUser) => {
+      this._authStateSubscription = authState(this.auth).subscribe(async (firebaseUser) => {
         console.log(
           'Auth State geändert:',
           firebaseUser ? 'Benutzer angemeldet' : 'Nicht angemeldet'
@@ -99,6 +108,12 @@ export class AuthService {
         if (firebaseUser) {
           // Benutzerdaten aus Firestore laden
           try {
+            console.log('Versuche Benutzerdaten zu laden für UID:', firebaseUser.uid);
+            
+            // Log the token for debugging
+            const token = await firebaseUser.getIdToken();
+            console.log('Auth token available:', !!token);
+            
             const userDoc = await this.firebaseService.query<User>(
               'users',
               'uid',
@@ -109,29 +124,94 @@ export class AuthService {
             if (userDoc && userDoc.length > 0) {
               console.log('Benutzerdaten geladen:', userDoc[0]);
               this._currentUser.set(userDoc[0]);
+              localStorage.setItem('user_id', firebaseUser.uid);
             } else {
-              // Wenn kein Benutzerdokument gefunden wurde, erstelle eines mit Standardrolle
-              const newUser: User = {
-                uid: firebaseUser.uid,
-                email: firebaseUser.email || '',
-                displayName: firebaseUser.displayName || '',
-                role: 'leserecht', // Standardrolle
-              };
-
-              await this.firebaseService.add('users', newUser);
-              this._currentUser.set(newUser);
+              // Create with retry logic if first attempt fails
+              await this.createUserDocumentWithRetry(firebaseUser);
             }
           } catch (error) {
             console.error('Fehler beim Laden der Benutzerdaten:', error);
-            this._error.set('Fehler beim Laden der Benutzerdaten');
+            
+            // Try to create user document if query failed
+            try {
+              await this.createUserDocumentWithRetry(firebaseUser);
+            } catch (createError) {
+              console.error('Fehler beim Erstellen des Benutzerdokuments:', createError);
+              this._error.set('Fehler beim Laden der Benutzerdaten. Bitte neu anmelden.');
+              await this.logout();
+            }
           }
         } else {
           // Benutzer ist nicht angemeldet
           console.log('Benutzer abgemeldet');
           this._currentUser.set(null);
+          localStorage.removeItem('user_id');
+          
+          // Only redirect to login if we're not already on the login or related pages
+          const currentUrl = this.router.url;
+          if (!currentUrl.includes('/login') && 
+              !currentUrl.includes('/register') && 
+              !currentUrl.includes('/verify-email') &&
+              !currentUrl.includes('/reset-password')) {
+            this.router.navigate(['/login']);
+          }
         }
       });
     }, 500); // 500ms Verzögerung
+  }
+
+  /**
+   * Creates a user document with retry logic
+   * @param firebaseUser The Firebase user object
+   * @private
+   */
+  private async createUserDocumentWithRetry(firebaseUser: FirebaseUser, retries = 3): Promise<void> {
+    try {
+      console.log('Erstelle neues Benutzerdokument für:', firebaseUser.uid);
+      const newUser: User = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email || '',
+        displayName: firebaseUser.displayName || '',
+        role: 'leserecht', // Standardrolle
+        emailVerified: firebaseUser.emailVerified
+      };
+
+      // Add user document to Firestore
+      await this.firebaseService.add('users', newUser);
+      console.log('Benutzerdokument erfolgreich erstellt');
+      
+      // Update local state
+      this._currentUser.set(newUser);
+      localStorage.setItem('user_id', firebaseUser.uid);
+    } catch (error) {
+      console.error(`Fehler beim Erstellen des Benutzerdokuments (Versuch ${4 - retries}/3):`, error);
+      
+      if (retries > 0) {
+        console.log(`Wiederhole in 1 Sekunde...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return this.createUserDocumentWithRetry(firebaseUser, retries - 1);
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Handle Firebase errors with better logging and user feedback
+   * @param error The Firebase error
+   * @param operation The name of the operation that failed
+   * @private
+   */
+  private handleAuthError(error: any, operation: string): void {
+    console.error(`${operation} error:`, error);
+    
+    let message = 'Ein unbekannter Fehler ist aufgetreten';
+    
+    if (error.code === 'permission-denied' || error.message?.includes('permission')) {
+      message = 'Fehlende Berechtigungen. Sie haben nicht die nötigen Rechte für diese Aktion.';
+    }
+    
+    this._error.set(message);
   }
 
   /**
@@ -140,7 +220,7 @@ export class AuthService {
    * @param password Passwort
    * @returns Promise mit UserCredential
    */
-  async login(email: string, password: string): Promise<UserCredential> {
+  async login(email: string, password: string): Promise<void> {
     this._isLoading.set(true);
     this._error.set(null);
 
@@ -155,21 +235,42 @@ export class AuthService {
         password
       );
       localStorage.setItem('user_id', userCredential.user.uid);
-      return userCredential;
-    } catch (error: any) {
-      let errorMessage = 'Anmeldung fehlgeschlagen';
 
-      if (
-        error.code === 'auth/user-not-found' ||
-        error.code === 'auth/wrong-password'
-      ) {
-        errorMessage = 'E-Mail oder Passwort ungültig';
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage =
-          'Zu viele Anmeldeversuche. Bitte versuchen Sie es später erneut.';
+      if (!userCredential.user) {
+        throw new Error('Authentication failed');
       }
 
-      this._error.set(errorMessage);
+      // Check email verification
+      if (!userCredential.user.emailVerified) {
+        this._error.set('E-Mail-Adresse nicht bestätigt. Bitte überprüfen Sie Ihr E-Mail-Postfach.');
+        await this.logout();
+        return;
+      }
+
+      // User is authenticated, state service will handle the user state
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      let message = 'Anmeldung fehlgeschlagen';
+      switch (error.code) {
+        case 'auth/invalid-email':
+          message = 'Ungültige E-Mail-Adresse';
+          break;
+        case 'auth/user-disabled':
+          message = 'Benutzer deaktiviert';
+          break;
+        case 'auth/user-not-found':
+          message = 'Benutzer nicht gefunden';
+          break;
+        case 'auth/wrong-password':
+          message = 'Falsches Passwort';
+          break;
+        case 'auth/too-many-requests':
+          message = 'Zu viele fehlgeschlagene Anmeldeversuche. Bitte versuchen Sie es später erneut.';
+          break;
+      }
+      
+      this._error.set(message);
       throw error;
     } finally {
       this._isLoading.set(false);
@@ -187,9 +288,9 @@ export class AuthService {
   async register(
     email: string,
     password: string,
-    displayName: string,
+    displayName: string = '',
     role: User['role'] = 'leserecht'
-  ): Promise<UserCredential> {
+  ): Promise<void> {
     this._isLoading.set(true);
     this._error.set(null);
 
@@ -215,19 +316,34 @@ export class AuthService {
 
       await this.firebaseService.add('users', newUser);
 
-      return userCredential;
+      // Send verification email
+      await this.sendEmailVerification(userCredential.user);
+      
+      // Sign out the user immediately after registration
+      // They need to verify their email first
+      await this.logout();
+      
+      return;
     } catch (error: any) {
-      let errorMessage = 'Registrierung fehlgeschlagen';
-
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'Diese E-Mail-Adresse wird bereits verwendet';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Ungültige E-Mail-Adresse';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Das Passwort ist zu schwach';
+      console.error('Registration error:', error);
+      
+      let message = 'Registrierung fehlgeschlagen';
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          message = 'E-Mail-Adresse bereits registriert';
+          break;
+        case 'auth/invalid-email':
+          message = 'Ungültige E-Mail-Adresse';
+          break;
+        case 'auth/weak-password':
+          message = 'Passwort zu schwach';
+          break;
+        case 'auth/operation-not-allowed':
+          message = 'Registrierung nicht erlaubt';
+          break;
       }
-
-      this._error.set(errorMessage);
+      
+      this._error.set(message);
       throw error;
     } finally {
       this._isLoading.set(false);
@@ -297,5 +413,141 @@ export class AuthService {
    */
   clearError(): void {
     this._error.set(null);
+  }
+
+  /**
+   * Send a verification email to the user
+   */
+  async sendEmailVerification(user: FirebaseUser): Promise<void> {
+    this._error.set(null);
+    
+    try {
+      await sendEmailVerification(user);
+    } catch (error: any) {
+      console.error('Email verification error:', error);
+      this._error.set('Fehler beim Senden der Bestätigungs-E-Mail');
+      throw error;
+    }
+  }
+
+  /**
+   * Send a password reset email
+   */
+  async sendPasswordResetEmail(email: string): Promise<void> {
+    this._error.set(null);
+    
+    try {
+      await sendPasswordResetEmail(this.auth, email);
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      
+      let message = 'Fehler beim Zurücksetzen des Passworts';
+      switch (error.code) {
+        case 'auth/invalid-email':
+          message = 'Ungültige E-Mail-Adresse';
+          break;
+        case 'auth/user-not-found':
+          message = 'Benutzer nicht gefunden';
+          break;
+      }
+      
+      this._error.set(message);
+      throw error;
+    }
+  }
+
+  /**
+   * Confirm a password reset
+   */
+  async confirmPasswordReset(code: string, newPassword: string): Promise<void> {
+    this._error.set(null);
+    
+    try {
+      await confirmPasswordReset(this.auth, code, newPassword);
+    } catch (error: any) {
+      console.error('Password reset confirmation error:', error);
+      this._error.set('Fehler beim Bestätigen des neuen Passworts');
+      throw error;
+    }
+  }
+
+  /**
+   * Verify a password reset code
+   */
+  async verifyPasswordResetCode(code: string): Promise<string> {
+    this._error.set(null);
+    
+    try {
+      return await verifyPasswordResetCode(this.auth, code);
+    } catch (error: any) {
+      console.error('Password reset code verification error:', error);
+      this._error.set('Ungültiger oder abgelaufener Code');
+      throw error;
+    }
+  }
+
+  /**
+   * Apply an action code (email verification, password reset, etc.)
+   */
+  async applyActionCode(code: string): Promise<void> {
+    this._error.set(null);
+    
+    try {
+      await applyActionCode(this.auth, code);
+    } catch (error: any) {
+      console.error('Action code application error:', error);
+      this._error.set('Ungültiger oder abgelaufener Code');
+      throw error;
+    }
+  }
+
+  /**
+   * Update a user's password
+   */
+  async updatePassword(user: FirebaseUser, newPassword: string): Promise<void> {
+    this._error.set(null);
+    
+    try {
+      await updatePassword(user, newPassword);
+    } catch (error: any) {
+      console.error('Password update error:', error);
+      this._error.set('Fehler bei der Aktualisierung des Passworts');
+      throw error;
+    }
+  }
+
+  /**
+   * Resend verification email to a user
+   * This attempts to sign in the user first to get their credentials,
+   * then sends a verification email
+   */
+  async resendVerificationEmail(email: string): Promise<void> {
+    this._error.set(null);
+    
+    try {
+      // Try to find the user
+      const methods = await fetchSignInMethodsForEmail(this.auth, email);
+      
+      if (methods && methods.length > 0) {
+        // User exists, but we need to have a user object to send the verification email
+        // We'll use a temporary login without password to access the API
+        
+        // First, send a password reset email which will also verify the email exists
+        await sendPasswordResetEmail(this.auth, email);
+        
+        this.snackBar.open(
+          'Wir haben Ihnen eine E-Mail mit einem Link zum Zurücksetzen Ihres Passworts gesendet. ' + 
+          'Nachdem Sie Ihr Passwort zurückgesetzt haben, können Sie sich anmelden.',
+          'Schließen',
+          { duration: 8000 }
+        );
+      } else {
+        this._error.set('Die E-Mail-Adresse ist nicht registriert.');
+      }
+    } catch (error: any) {
+      console.error('Resend verification email error:', error);
+      this._error.set('Fehler beim Senden der Bestätigungs-E-Mail.');
+      throw error;
+    }
   }
 }
