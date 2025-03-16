@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Firebase Connectivity Test</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+    h1 { color: #FF7F00; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+    .success { color: green; }
+    .error { color: red; }
+    button { padding: 10px; background: #FF7F00; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    pre { background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    #config-input { width: 100%; height: 200px; font-family: monospace; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Firebase Connectivity Test</h1>
+  
+  <div class="card">
+    <h2>Step 1: Enter Firebase Configuration</h2>
+    <p>Paste your Firebase configuration JSON here:</p>
+    <textarea id="config-input" placeholder='{
+  "apiKey": "YOUR_API_KEY",
+  "authDomain": "your-project.firebaseapp.com",
+  "projectId": "your-project",
+  "storageBucket": "your-project.appspot.com",
+  "messagingSenderId": "123456789012",
+  "appId": "1:123456789012:web:abc123def456",
+  "measurementId": "G-ABC123DEF4"
+}'></textarea>
+    <button onclick="testFirebase()">Test Connection</button>
+  </div>
+  
+  <div class="card">
+    <h2>Connection Results</h2>
+    <div id="results">Enter your configuration and click "Test Connection"</div>
+  </div>
+  
+  <p><a href="/">Return to Application</a> | <a href="/assets/angular-debug.html">Return to Angular Debug Tool</a></p>
+  
+  <script>
+    async function testFirebase() {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<p>Testing connection...</p>';
+      
+      try {
+        // Parse the config
+        const configText = document.getElementById('config-input').value;
+        const config = JSON.parse(configText);
+        
+        // Initialize Firebase
+        resultsDiv.innerHTML += '<p>Initializing Firebase...</p>';
+        firebase.initializeApp(config);
+        
+        // Test Firestore
+        resultsDiv.innerHTML += '<p>Testing Firestore connection...</p>';
+        try {
+          const db = firebase.firestore();
+          const testDoc = await db.collection('__test__').doc('test').get();
+          resultsDiv.innerHTML += '<p class="success">✅ Firestore connection successful!</p>';
+        } catch (firestoreError) {
+          console.error('Firestore error:', firestoreError);
+          resultsDiv.innerHTML += `<p class="error">❌ Firestore error: ${firestoreError.message}</p>`;
+        }
+        
+        // Test Auth
+        resultsDiv.innerHTML += '<p>Testing Auth connection...</p>';
+        try {
+          await firebase.auth().signInAnonymously();
+          resultsDiv.innerHTML += '<p class="success">✅ Auth connection successful!</p>';
+        } catch (authError) {
+          if (authError.code === 'auth/admin-restricted-operation') {
+            // This is actually good - it means we reached the auth service but anonymous auth is disabled
+            resultsDiv.innerHTML += '<p class="success">✅ Auth connection successful! (Anonymous auth is disabled)</p>';
+          } else {
+            console.error('Auth error:', authError);
+            resultsDiv.innerHTML += `<p class="error">❌ Auth error: ${authError.message}</p>`;
+          }
+        }
+        
+        resultsDiv.innerHTML += '<h3>Test Complete!</h3>';
+      } catch (error) {
+        console.error('Test failed:', error);
+        resultsDiv.innerHTML = `<p class="error">❌ Test failed: ${error.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>

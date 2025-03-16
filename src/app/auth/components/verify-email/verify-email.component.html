@@ -1,98 +1,128 @@
-<div class="verify-container">
-  <mat-card class="verify-card">
+<div class="verify-email-container">
+  <mat-card appearance="outlined" class="verify-email-card">
     <mat-card-header>
-      <mat-card-title>ZSO Gantrisch Verwaltungssystem</mat-card-title>
-      <mat-card-subtitle>E-Mail-Bestätigung</mat-card-subtitle>
+      <div mat-card-avatar class="verify-email-icon">
+        <mat-icon color="primary">mail_outline</mat-icon>
+      </div>
+      <mat-card-title>E-Mail-Adresse verifizieren</mat-card-title>
+      <mat-card-subtitle>
+        @if (!verificationInProgress()) {
+          E-Mail-Verifizierung erforderlich
+        } @else {
+          Bestätigungslink wird verarbeitet
+        }
+      </mat-card-subtitle>
     </mat-card-header>
     
     <mat-card-content>
       @if (isLoading()) {
-        <div class="loading-state">
+        <!-- Loading indicator -->
+        <div class="loading-container">
           <mat-spinner diameter="40"></mat-spinner>
-          <p>Verifizierung wird durchgeführt...</p>
+          <p>Verifizierung läuft...</p>
         </div>
       } @else if (isVerified()) {
-        <div class="success-state">
-          <mat-icon>check_circle</mat-icon>
-          <div class="message">
-            <h3>E-Mail erfolgreich bestätigt!</h3>
-            <p>Ihre E-Mail-Adresse wurde erfolgreich verifiziert. Sie können sich jetzt anmelden.</p>
+        <!-- Success state -->
+        <div class="success-container">
+          <div class="success-icon">
+            <mat-icon color="primary">check_circle</mat-icon>
           </div>
-        </div>
-        <div class="action-buttons">
-          <button mat-raised-button color="primary" (click)="goToLogin()">
-            <mat-icon>login</mat-icon>
-            Zur Anmeldung
-          </button>
+          <h2>E-Mail-Adresse bestätigt!</h2>
+          <p>
+            Ihre E-Mail-Adresse wurde erfolgreich verifiziert.
+            Sie können sich jetzt anmelden und die Anwendung nutzen.
+          </p>
         </div>
       } @else if (errorMessage()) {
-        <div class="error-state">
-          <mat-icon>error</mat-icon>
-          <div class="message">
-            <h3>Fehler bei der Verifizierung</h3>
-            <p>{{ errorMessage() }}</p>
-            <p>Bitte versuchen Sie es erneut oder fordern Sie einen neuen Bestätigungslink an.</p>
+        <!-- Error state -->
+        <div class="error-container">
+          <div class="error-icon">
+            <mat-icon color="warn">error_outline</mat-icon>
           </div>
+          <h2>Fehler bei der Verifizierung</h2>
+          <p class="error-message">{{ errorMessage() }}</p>
+          @if (verificationInProgress()) {
+            <p>Der Bestätigungslink ist möglicherweise abgelaufen oder wurde bereits verwendet.</p>
+            <p>Bitte fordern Sie einen neuen Bestätigungslink an.</p>
+          }
         </div>
-        <div class="resend-section">
-          <h4>Neuen Bestätigungslink anfordern</h4>
-          <div class="email-input-group">
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Ihre E-Mail-Adresse</mat-label>
-              <input matInput type="email" [value]="email()" (input)="onEmailChange($event)" placeholder="beispiel@email.ch">
-              <mat-icon matPrefix>email</mat-icon>
-            </mat-form-field>
-            <button mat-raised-button color="primary" [disabled]="!email()" (click)="resendVerification()">
-              <mat-icon>send</mat-icon>
-              Link zusenden
-            </button>
+      } @else if (verificationInProgress()) {
+        <!-- Processing verification link -->
+        <div class="processing-container">
+          <div class="processing-icon">
+            <mat-icon color="accent">hourglass_empty</mat-icon>
           </div>
-        </div>
-        <div class="action-buttons">
-          <button mat-stroked-button color="primary" (click)="goToLogin()">
-            <mat-icon>login</mat-icon>
-            Zur Anmeldung
-          </button>
+          <h2>Bestätigungslink wird verarbeitet</h2>
+          <p>
+            Ihr Bestätigungslink wird gerade verarbeitet. 
+            Bitte haben Sie einen Moment Geduld.
+          </p>
         </div>
       } @else {
-        <div class="info-state">
-          <mat-icon>info</mat-icon>
-          <div class="message">
-            <h3>E-Mail-Bestätigung erforderlich</h3>
-            <p>
-              Bitte öffnen Sie den Link in der E-Mail, die wir Ihnen gesendet haben,
-              um Ihre E-Mail-Adresse zu bestätigen.
-            </p>
-            <p>Falls Sie keine E-Mail erhalten haben, prüfen Sie bitte Ihren Spam-Ordner.</p>
-          </div>
+        <!-- Default state - need to verify email -->
+        <div class="verify-email-info">
+          <p>
+            Um Ihre Registrierung abzuschließen, müssen Sie Ihre E-Mail-Adresse bestätigen.
+          </p>
+          <p>
+            Wir haben eine E-Mail mit einem Bestätigungslink an 
+            <strong>{{ email() || 'Ihre E-Mail-Adresse' }}</strong> gesendet.
+          </p>
+          <p>
+            Bitte öffnen Sie die E-Mail und klicken Sie auf den Bestätigungslink.
+          </p>
         </div>
-        <div class="resend-section">
-          <h4>Neuen Bestätigungslink anfordern</h4>
-          <div class="email-input-group">
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Ihre E-Mail-Adresse</mat-label>
-              <input matInput type="email" [value]="email()" (input)="onEmailChange($event)" placeholder="beispiel@email.ch">
-              <mat-icon matPrefix>email</mat-icon>
-            </mat-form-field>
-            <button mat-raised-button color="primary" [disabled]="!email()" (click)="resendVerification()">
-              <mat-icon>send</mat-icon>
-              Link zusenden
-            </button>
-          </div>
-        </div>
-        <div class="action-buttons">
-          <button mat-stroked-button color="primary" (click)="goToLogin()">
-            <mat-icon>login</mat-icon>
-            Zur Anmeldung
-          </button>
+      }
+
+      <!-- Email input for resending verification (only show if not verified) -->
+      @if (!isVerified() && !verificationInProgress()) {
+        <div class="email-input-container">
+          <p>Keine E-Mail erhalten? Geben Sie Ihre E-Mail-Adresse ein, um einen neuen Bestätigungslink zu erhalten.</p>
+          <mat-form-field appearance="outline" class="email-input">
+            <mat-label>E-Mail-Adresse</mat-label>
+            <input 
+              matInput 
+              type="email" 
+              [value]="email()" 
+              (input)="onEmailChange($event)" 
+              placeholder="beispiel@email.ch"
+              [disabled]="isLoading()">
+            <mat-icon matPrefix>email</mat-icon>
+          </mat-form-field>
         </div>
       }
     </mat-card-content>
     
-    <mat-card-footer>
-      <div class="footer-text">
-        Bei Problemen wenden Sie sich bitte an den Administrator.
-      </div>
-    </mat-card-footer>
+    <mat-card-actions align="end">
+      @if (isVerified()) {
+        <button 
+          mat-raised-button 
+          color="primary" 
+          (click)="goToLogin()">
+          Zur Anmeldung
+        </button>
+      } @else if (!verificationInProgress()) {
+        <button 
+          mat-stroked-button 
+          color="primary" 
+          (click)="goToLogin()">
+          Zurück zur Anmeldung
+        </button>
+        <button 
+          mat-raised-button 
+          color="primary" 
+          (click)="resendVerification()"
+          [disabled]="isLoading() || !email()">
+          Bestätigungslink neu senden
+        </button>
+      } @else {
+        <button 
+          mat-stroked-button 
+          color="primary" 
+          (click)="goToLogin()">
+          Zur Anmeldung
+        </button>
+      }
+    </mat-card-actions>
   </mat-card>
 </div>

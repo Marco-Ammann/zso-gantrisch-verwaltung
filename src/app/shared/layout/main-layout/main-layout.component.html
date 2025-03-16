@@ -1,36 +1,28 @@
 <div class="main-layout-container">
-    <!-- Nur anzeigen, wenn der Benutzer authentifiziert ist -->
-    @if (isAuthenticated()) {
-      <!-- Header-Bereich -->
-      <app-header 
-        [sideNavOpened]="sideNavOpened()" 
-        (toggleSideNav)="toggleSideNav()">
-      </app-header>
-      
-      <!-- Hauptbereich mit Seitennavigation -->
-      <mat-sidenav-container class="sidenav-container">
-        <!-- Seitennavigation -->
-        <mat-sidenav 
-          [mode]="isHandset() ? 'over' : 'side'"
-          [opened]="sideNavOpened()"
-          [disableClose]="!isHandset()"
-          [fixedInViewport]="isHandset()"
-          [fixedTopGap]="isHandset() ? 64 : 0"
-          class="sidenav">
-          <app-sidebar></app-sidebar>
-        </mat-sidenav>
-        
-        <!-- Hauptinhalt -->
-        <mat-sidenav-content class="content-container">
-          <div class="content-wrapper">
-            <router-outlet></router-outlet>
-          </div>
-        </mat-sidenav-content>
-      </mat-sidenav-container>
-    } @else {
-      <!-- Wenn nicht authentifiziert, nur den Router-Outlet anzeigen (für Login) -->
-      <div class="auth-container">
+  <!-- Header-Bereich -->
+  <app-header 
+    [sideNavOpened]="sideNavOpened()" 
+    (toggleSideNav)="toggleSideNav()">
+  </app-header>
+  
+  <!-- Hauptbereich mit Seitennavigation -->
+  <mat-sidenav-container class="sidenav-container">
+    <!-- Seitennavigation -->
+    <mat-sidenav 
+      [mode]="isHandset() ? 'over' : 'side'"
+      [opened]="sideNavOpened()"
+      [disableClose]="!isHandset()"
+      [fixedInViewport]="isHandset()"
+      [fixedTopGap]="isHandset() ? 64 : 0"
+      class="sidenav">
+      <app-sidebar></app-sidebar>
+    </mat-sidenav>
+    
+    <!-- Hauptinhalt -->
+    <mat-sidenav-content class="content-container">
+      <div class="content-wrapper">
         <router-outlet></router-outlet>
       </div>
-    }
-  </div>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+</div>

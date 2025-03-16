@@ -1,6 +1,6 @@
 // src/app/modules/ausbildungen/ausbildungen.routes.ts
 import { Routes } from '@angular/router';
-import { authGuard } from '../../auth/guards/auth.guard';
+import { authGuard, roleGuard } from '../../auth/guards/auth.guard';
 
 export const AUSBILDUNGEN_ROUTES: Routes = [
   {
@@ -19,8 +19,7 @@ export const AUSBILDUNGEN_ROUTES: Routes = [
         (m) => m.AusbildungFormComponent
       ),
     title: 'Neue Ausbildung - ZSO Gantrisch',
-    canActivate: [authGuard],
-    data: { roles: ['admin', 'oberleutnant', 'leutnant'] },
+    canActivate: [roleGuard(['admin', 'oberleutnant', 'leutnant'])],
   },
   {
     path: 'matrix',
@@ -47,10 +46,8 @@ export const AUSBILDUNGEN_ROUTES: Routes = [
         (m) => m.AusbildungFormComponent
       ),
     title: 'Ausbildung bearbeiten - ZSO Gantrisch',
-    canActivate: [authGuard],
-    data: { roles: ['admin', 'oberleutnant', 'leutnant'] },
+    canActivate: [roleGuard(['admin', 'oberleutnant', 'leutnant'])],
   },
-
   {
     path: 'teilnahmen/:ausbildungId',
     loadComponent: () =>
@@ -60,5 +57,14 @@ export const AUSBILDUNGEN_ROUTES: Routes = [
     title: 'Teilnahmen erfassen - ZSO Gantrisch',
     canActivate: [authGuard],
     data: { roles: ['admin', 'oberleutnant', 'leutnant'] },
+  },
+  {
+    path: ':id/appell',
+    loadComponent: () =>
+      import('./appell-durchfuehrung/appell-durchfuehrung.component').then(
+        (m) => m.AppellDurchfuehrungComponent
+      ),
+    title: 'Appell durchführen - ZSO Gantrisch',
+    canActivate: [authGuard],
   },
 ];

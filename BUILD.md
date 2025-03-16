@@ -1,5 +1,7 @@
 # Build & Deployment Documentation for ZSO Gantrisch Verwaltung
 
+> **Note:** This application previously used Firebase Hosting but now uses Swizzonic FTP for deployment.
+
 ## Build Commands
 
 - `npm run build:prod`: Standard production build

@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ZSO Gantrisch - Angular Debug Tool</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    h1 {
+      color: #FF7F00;
+      border-bottom: 2px solid #FF7F00;
+      padding-bottom: 10px;
+    }
+    
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    
+    .card-header {
+      background: #f5f5f5;
+      padding: 15px 20px;
+      font-weight: bold;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .card-body {
+      padding: 20px;
+    }
+    
+    .success {
+      color: #28a745;
+    }
+    
+    .warning {
+      color: #ffc107;
+    }
+    
+    .error {
+      color: #dc3545;
+    }
+    
+    .pending {
+      color: #6c757d;
+    }
+    
+    .test-status {
+      font-size: 14px;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+    
+    .status-success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    .status-error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    
+    .status-warning {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    
+    .status-pending {
+      background-color: #e9ecef;
+      color: #6c757d;
+    }
+    
+    button {
+      background: #FF7F00;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    button:hover {
+      background: #E67300;
+    }
+    
+    pre {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+      overflow: auto;
+      font-size: 13px;
+    }
+    
+    .actions {
+      margin-top: 30px;
+      text-align: center;
+    }
+    
+    .details {
+      margin-top: 10px;
+      display: none;
+    }
+    
+    .show-details {
+      display: block;
+    }
+    
+    .firebase-test .firebase-status {
+      font-weight: bold;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    
+    table td, table th {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+    
+    table tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+    
+    table th {
+      padding-top: 10px;
+      padding-bottom: 10px;
+      text-align: left;
+      background-color: #f8f9fa;
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,127,0,0.3);
+      border-radius: 50%;
+      border-top-color: #FF7F00;
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h1>ZSO Gantrisch - Angular Debug Tool</h1>
+  
+  <div class="card">
+    <div class="card-header">
+      Environment Information
+    </div>
+    <div class="card-body">
+      <table>
+        <tr>
+          <td>URL</td>
+          <td id="current-url"></td>
+        </tr>
+        <tr>
+          <td>Browser</td>
+          <td id="browser-info"></td>
+        </tr>
+        <tr>
+          <td>Date & Time</td>
+          <td id="current-time"></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  
+  <div class="card">
+    <div class="card-header">
+      <span>Script Loading Test</span>
+      <span id="script-test-status" class="test-status status-pending">Pending</span>
+    </div>
+    <div class="card-body script-test">
+      <p>Testing if crucial Angular scripts can be loaded:</p>
+      <div id="script-results">Running tests...</div>
+      
+      <button id="toggle-script-details">Show Details</button>
+      <div id="script-details" class="details">
+        <h4>Required Scripts:</h4>
+        <pre id="scripts-list"></pre>
+      </div>
+    </div>
+  </div>
+  
+  <div class="card">
+    <div class="card-header">
+      <span>Firebase Connectivity Test</span>
+      <span id="firebase-test-status" class="test-status status-pending">Pending</span>
+    </div>
+    <div class="card-body firebase-test">
+      <p>Testing connectivity to Firebase services:</p>
+      <div id="firebase-results">
+        <p>Auth Service: <span class="firebase-status" id="firebase-auth-status">Checking...</span></p>
+        <p>Firestore: <span class="firebase-status" id="firebase-firestore-status">Checking...</span></p>
+      </div>
+      
+      <button id="toggle-firebase-details">Show Details</button>
+      <div id="firebase-details" class="details">
+        <h4>Firebase Config:</h4>
+        <pre id="firebase-config">Fetching configuration...</pre>
+      </div>
+    </div>
+  </div>
+  
+  <div class="card">
+    <div class="card-header">
+      <span>Content Security Policy Test</span>
+      <span id="csp-test-status" class="test-status status-pending">Pending</span>
+    </div>
+    <div class="card-body">
+      <p>Testing if Content Security Policy allows necessary connections:</p>
+      <div id="csp-results">Running tests...</div>
+      
+      <button id="toggle-csp-details">Show Details</button>
+      <div id="csp-details" class="details">
+        <h4>Current CSP Policy:</h4>
+        <pre id="csp-policy">Fetching CSP information...</pre>
+      </div>
+    </div>
+  </div>
+  
+  <div class="actions">
+    <button id="run-all-tests">Run All Tests Again</button>
+    <button onclick="window.location.href='/'">Return to Application</button>
+  </div>
+  
+  <script>
+    // Initialize
+    document.getElementById('current-url').textContent = window.location.href;
+    document.getElementById('browser-info').textContent = navigator.userAgent;
+    document.getElementById('current-time').textContent = new Date().toLocaleString();
+    
+    // Toggle details sections
+    document.getElementById('toggle-script-details').addEventListener('click', function() {
+      document.getElementById('script-details').classList.toggle('show-details');
+      this.textContent = this.textContent === 'Show Details' ? 'Hide Details' : 'Show Details';
+    });
+    
+    document.getElementById('toggle-firebase-details').addEventListener('click', function() {
+      document.getElementById('firebase-details').classList.toggle('show-details');
+      this.textContent = this.textContent === 'Show Details' ? 'Hide Details' : 'Show Details';
+    });
+    
+    document.getElementById('toggle-csp-details').addEventListener('click', function() {
+      document.getElementById('csp-details').classList.toggle('show-details');
+      this.textContent = this.textContent === 'Show Details' ? 'Hide Details' : 'Show Details';
+    });
+    
+    // Run Tests button
+    document.getElementById('run-all-tests').addEventListener('click', function() {
+      runAllTests();
+    });
+    
+    // Main test function
+    function runAllTests() {
+      testScriptLoading();
+      testFirebaseConnectivity();
+      testContentSecurityPolicy();
+    }
+    
+    // Test Script Loading
+    function testScriptLoading() {
+      const statusElement = document.getElementById('script-test-status');
+      const resultsElement = document.getElementById('script-results');
+      const detailsElement = document.getElementById('scripts-list');
+      
+      statusElement.textContent = 'Testing...';
+      statusElement.className = 'test-status status-pending';
+      resultsElement.innerHTML = '<div class="loading"></div> Checking script resources...';
+      
+      // Get scripts from home page
+      fetch('/')
+        .then(response => response.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const scripts = Array.from(doc.querySelectorAll('script[src]'));
+          
+          if (scripts.length === 0) {
+            statusElement.textContent = 'Failed';
+            statusElement.className = 'test-status status-error';
+            resultsElement.innerHTML = '<span class="error">No scripts found in index.html</span>';
+            detailsElement.textContent = 'No script elements found. This indicates a problem with the build.';
+            return;
+          }
+          
+          const scriptList = scripts.map(s => s.src).join('\n');
+          detailsElement.textContent = scriptList;
+          
+          // Test loading each script
+          const scriptTests = scripts.map(script => {
+            return new Promise((resolve) => {
+              const scriptElement = document.createElement('script');
+              scriptElement.src = script.src;
+              scriptElement.onload = () => resolve({ success: true, src: script.src });
+              scriptElement.onerror = () => resolve({ success: false, src: script.src });
+              document.head.appendChild(scriptElement);
+            });
+          });
+          
+          Promise.all(scriptTests).then(results => {
+            const failedScripts = results.filter(r => !r.success);
+            
+            if (failedScripts.length === 0) {
+              statusElement.textContent = 'Passed';
+              statusElement.className = 'test-status status-success';
+              resultsElement.innerHTML = '<span class="success">All scripts loaded successfully</span>';
+            } else {
+              statusElement.textContent = 'Failed';
+              statusElement.className = 'test-status status-error';
+              resultsElement.innerHTML = `<span class="error">${failedScripts.length} scripts failed to load</span>`;
+              
+              const failureList = document.createElement('ul');
+              failedScripts.forEach(script => {
+                const li = document.createElement('li');
+                li.textContent = script.src;
+                failureList.appendChild(li);
+              });
+              resultsElement.appendChild(failureList);
+            }
+          });
+        })
+        .catch(error => {
+          statusElement.textContent = 'Error';
+          statusElement.className = 'test-status status-error';
+          resultsElement.innerHTML = `<span class="error">Could not load index.html: ${error.message}</span>`;
+        });
+    }
+    
+    // Test Firebase Connectivity
+    function testFirebaseConnectivity() {
+      const statusElement = document.getElementById('firebase-test-status');
+      const authStatusElement = document.getElementById('firebase-auth-status');
+      const firestoreStatusElement = document.getElementById('firebase-firestore-status');
+      const configElement = document.getElementById('firebase-config');
+      
+      statusElement.textContent = 'Testing...';
+      statusElement.className = 'test-status status-pending';
+      
+      // First try to get the Firebase config from window
+      fetch('/').then(response => response.text()).then(html => {
+        const regex = /firebaseConfig\s*=\s*({[^;]*})/g;
+        const match = regex.exec(html);
+        
+        if (match && match[1]) {
+          try {
+            // Try to parse the config (might not be valid JSON)
+            const configStr = match[1].replace(/'/g, '"');
+            const config = JSON.parse(configStr);
+            configElement.textContent = JSON.stringify(config, null, 2);
+          } catch (e) {
+            configElement.textContent = 'Could not parse Firebase config: ' + e.message;
+          }
+        } else {
+          configElement.textContent = 'Firebase config not found in index.html';
+        }
+        
+        // Check Firebase Auth connectivity
+        fetch('https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key=AIzaSyDummy')
+          .then(() => {
+            authStatusElement.textContent = 'Reachable';
+            authStatusElement.className = 'success';
+            updateOverallStatus();
+          })
+          .catch(error => {
+            // Even a 400 error means we can reach Firebase Auth
+            if (error.name === 'TypeError') {
+              authStatusElement.textContent = 'Unreachable';
+              authStatusElement.className = 'error';
+            } else {
+              authStatusElement.textContent = 'Reachable';
+              authStatusElement.className = 'success';
+            }
+            updateOverallStatus();
+          });
+        
+        // Check Firebase Firestore connectivity
+        fetch('https://firestore.googleapis.com/')
+          .then(() => {
+            firestoreStatusElement.textContent = 'Reachable';
+            firestoreStatusElement.className = 'success';
+            updateOverallStatus();
+          })
+          .catch(error => {
+            if (error.name === 'TypeError') {
+              firestoreStatusElement.textContent = 'Unreachable';
+              firestoreStatusElement.className = 'error';
+            } else {
+              firestoreStatusElement.textContent = 'Reachable';
+              firestoreStatusElement.className = 'success';
+            }
+            updateOverallStatus();
+          });
+      });
+      
+      function updateOverallStatus() {
+        if (authStatusElement.className === 'error' || firestoreStatusElement.className === 'error') {
+          statusElement.textContent = 'Failed';
+          statusElement.className = 'test-status status-error';
+        } else if (authStatusElement.className === 'success' && firestoreStatusElement.className === 'success') {
+          statusElement.textContent = 'Passed';
+          statusElement.className = 'test-status status-success';
+        }
+      }
+    }
+    
+    // Test Content Security Policy
+    function testContentSecurityPolicy() {
+      const statusElement = document.getElementById('csp-test-status');
+      const resultsElement = document.getElementById('csp-results');
+      const policyElement = document.getElementById('csp-policy');
+      
+      statusElement.textContent = 'Testing...';
+      statusElement.className = 'test-status status-pending';
+      resultsElement.innerHTML = '<div class="loading"></div> Checking CSP compatibility...';
+      
+      // Get the CSP header
+      fetch('/')
+        .then(response => {
+          const csp = response.headers.get('Content-Security-Policy');
+          if (csp) {
+            policyElement.textContent = csp;
+            
+            // Check for key Firebase domains in the CSP
+            const requiredDomains = [
+              { domain: 'googleapis.com', type: 'connect-src' },
+              { domain: 'firebaseio.com', type: 'connect-src' },
+              { domain: 'unsafe-eval', type: 'script-src' }
+            ];
+            
+            const issues = [];
+            requiredDomains.forEach(item => {
+              if (!csp.includes(item.domain)) {
+                issues.push(`Missing '${item.domain}' in ${item.type} directive`);
+              }
+            });
+            
+            if (issues.length === 0) {
+              statusElement.textContent = 'Passed';
+              statusElement.className = 'test-status status-success';
+              resultsElement.innerHTML = '<span class="success">CSP appears to allow necessary connections</span>';
+            } else {
+              statusElement.textContent = 'Warning';
+              statusElement.className = 'test-status status-warning';
+              
+              let html = '<span class="warning">CSP may be blocking necessary connections:</span><ul>';
+              issues.forEach(issue => {
+                html += `<li>${issue}</li>`;
+              });
+              html += '</ul>';
+              resultsElement.innerHTML = html;
+            }
+          } else {
+            statusElement.textContent = 'Warning';
+            statusElement.className = 'test-status status-warning';
+            resultsElement.innerHTML = '<span class="warning">No CSP header found. This may be ok but lacks security protections.</span>';
+            policyElement.textContent = 'No Content-Security-Policy header detected';
+          }
+        })
+        .catch(error => {
+          statusElement.textContent = 'Error';
+          statusElement.className = 'test-status status-error';
+          resultsElement.innerHTML = `<span class="error">Error checking CSP: ${error.message}</span>`;
+        });
+    }
+    
+    // Run all tests initially
+    runAllTests();
+  </script>
+</body>
+</html>

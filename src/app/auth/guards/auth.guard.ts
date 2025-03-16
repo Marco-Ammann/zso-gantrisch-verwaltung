@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { CanActivateFn, Router, UrlTree } from '@angular/router';
 import { AuthService } from '../services/auth.service';
-import { map, take, catchError } from 'rxjs/operators';
+import { map, take, catchError, tap } from 'rxjs/operators';
 import { Observable, of } from 'rxjs';
 
 /**
@@ -11,11 +11,12 @@ export const authGuard: CanActivateFn = (): Observable<boolean | UrlTree> => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
+  console.log('Auth guard checking authentication status...');
+
   return authService.currentUser$.pipe(
     take(1),
+    tap(user => console.log('Auth guard check - Current user:', user ? `${user.email} (${user.role})` : 'Not authenticated')),
     map(user => {
-      console.log('Auth guard check - Current user:', user);
-      
       // Save the intended destination for after login
       const returnUrl = router.routerState.snapshot.url;
       if (returnUrl && 
@@ -60,13 +61,15 @@ export const publicGuard: CanActivateFn = (): Observable<boolean | UrlTree> => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
+  console.log('Public guard checking authentication status...');
+
   return authService.isAuthenticated$.pipe(
     take(1),
+    tap(isAuth => console.log('Public guard check - Is authenticated:', isAuth)),
     map(isAuth => {
-      console.log('Public guard check - Is authenticated:', isAuth);
-      
       // If not authenticated, allow access to public routes
       if (!isAuth) {
+        console.log('Public guard: User not authenticated, access granted');
         return true;
       }
       
@@ -79,9 +82,9 @@ export const publicGuard: CanActivateFn = (): Observable<boolean | UrlTree> => {
         });
       }
       
-      // If authenticated and email verified, redirect to home
-      console.log('Public guard: User authenticated and verified, redirecting to home');
-      return router.createUrlTree(['/']);
+      // If authenticated and email verified, redirect to dashboard explicitly
+      console.log('Public guard: User authenticated and verified, redirecting to dashboard');
+      return router.createUrlTree(['/dashboard']);
     }),
     catchError(error => {
       console.error('Error in public guard:', error);

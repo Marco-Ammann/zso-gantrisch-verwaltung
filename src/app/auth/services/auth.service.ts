@@ -27,6 +27,7 @@ import { FirebaseService } from '../../core/services/firebase.service';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Subscription } from 'rxjs';
+import { environment } from '../../../environments/environment'; // Add this import
 
 /**
  * Service für die Authentifizierung und Benutzerverwaltung
@@ -101,18 +102,43 @@ export class AuthService implements OnDestroy {
     try {
       const auth = getAuth();
       
-      // First try to handle compatibility mode
-      try {
-        // For environments that support the standard persistence
-        await setPersistence(auth, browserLocalPersistence);
-      } catch (e) {
-        if (e instanceof TypeError && e.message.includes('constructor')) {
-          // For environments with limitations, fall back to in-memory persistence
-          console.warn('Firebase persistence not fully supported in this environment, using fallback');
-          await setPersistence(auth, inMemoryPersistence);
-        } else {
-          throw e;
+      // Log the current environment for debugging
+      console.log(`Setting Firebase persistence in ${environment.production ? 'production' : 'development'} mode`);
+
+      // First check if IndexedDB is available
+      const indexedDBAvailable = await this.checkIndexedDBAvailability();
+      
+      if (indexedDBAvailable) {
+        try {
+          // Try standard persistence
+          await setPersistence(auth, browserLocalPersistence);
+          console.log('Firebase persistence set to LOCAL');
+        } catch (e) {
+          if (e instanceof TypeError && e.message.includes('constructor')) {
+            // For environments with limitations, fall back to in-memory persistence
+            console.warn('Firebase persistence not fully supported in this environment, using fallback');
+            await setPersistence(auth, inMemoryPersistence);
+            console.log('Firebase persistence set to IN_MEMORY');
+            
+            // Show a warning to the user if in private mode
+            if (this.isPrivateBrowsing()) {
+              setTimeout(() => {
+                this.snackBar.open(
+                  'Sie verwenden einen privaten Browsing-Modus. Die Anmeldung bleibt nur für diese Sitzung bestehen.',
+                  'OK',
+                  { duration: 7000 }
+                );
+              }, 1000);
+            }
+          } else {
+            throw e;
+          }
         }
+      } else {
+        // IndexedDB not available, use in-memory persistence
+        console.warn('IndexedDB not available, using in-memory persistence');
+        await setPersistence(auth, inMemoryPersistence);
+        console.log('Firebase persistence set to IN_MEMORY due to IndexedDB unavailability');
       }
     } catch (error) {
       console.error('Error setting persistence:', error);
@@ -121,12 +147,67 @@ export class AuthService implements OnDestroy {
   }
 
   /**
+   * Check if IndexedDB is available in the current browser environment
+   * @private
+   * @returns A promise resolving to a boolean indicating if IndexedDB is available
+   */
+  private async checkIndexedDBAvailability(): Promise<boolean> {
+    if (!window.indexedDB) {
+      return false;
+    }
+    
+    return new Promise<boolean>((resolve) => {
+      try {
+        const request = indexedDB.open('test_idb', 1);
+        
+        request.onerror = () => {
+          console.warn('IndexedDB access denied');
+          resolve(false);
+        };
+        
+        request.onsuccess = () => {
+          const db = request.result;
+          db.close();
+          
+          // Clean up the test database
+          try {
+            indexedDB.deleteDatabase('test_idb');
+          } catch (e) {
+            // Ignore deletion errors
+          }
+          
+          console.log('IndexedDB is available');
+          resolve(true);
+        };
+      } catch (error) {
+        console.warn('Error checking IndexedDB availability:', error);
+        resolve(false);
+      }
+    });
+  }
+
+  /**
+   * Detect if the browser is likely in private browsing mode
+   * @private
+   * @returns A boolean indicating if private browsing is detected
+   */
+  private isPrivateBrowsing(): boolean {
+    try {
+      localStorage.setItem('test', 'test');
+      localStorage.removeItem('test');
+      return false;
+    } catch (e) {
+      return true;
+    }
+  }
+  
+
+  /**
    * Initialisiert den Auth-State-Listener
    */
   private initAuthListener(): void {
     console.log('Auth Listener initialisiert');
 
-    // No timeout - this can cause the logout issue on reload
     this._authStateSubscription = authState(this.auth).subscribe(async (firebaseUser) => {
       console.log(
         'Auth State geändert:',
@@ -140,19 +221,16 @@ export class AuthService implements OnDestroy {
         
         // Give Firebase a chance to restore authentication
         setTimeout(async () => {
-          // Check again if the user is still null after the timeout
+          // Check if auth has been restored before proceeding with logout
           if (!this.auth.currentUser) {
             console.log('After waiting, user is still not authenticated');
             this._currentUser.set(null);
-            localStorage.removeItem('user_id'); // Clear user ID when definitively logged out
-            localStorage.removeItem('returnUrl'); // Clear any stale return URL
+            localStorage.removeItem('user_id');
+            localStorage.removeItem('returnUrl');
             
             // Only redirect if not on an auth-related page
             const currentUrl = this.router.url;
-            if (!currentUrl.includes('/login') && 
-                !currentUrl.includes('/register') && 
-                !currentUrl.includes('/verify-email') &&
-                !currentUrl.includes('/reset-password')) {
+            if (!this.isAuthRoute(currentUrl)) {
               this.router.navigate(['/login']);
             }
           } else {
@@ -163,8 +241,24 @@ export class AuthService implements OnDestroy {
         return; // Exit early to give Firebase a chance
       }
 
+      // Process authenticated user
       if (firebaseUser) {
         try {
+          // Check if email is verified
+          if (!firebaseUser.emailVerified && !environment.skipEmailVerification) {
+            console.log('User email not verified, redirecting to verification page');
+            this._currentUser.set(null);
+            
+            // Only navigate to verification page if not already there
+            if (!this.router.url.includes('/verify-email')) {
+              this.router.navigate(['/verify-email'])
+                .then(() => console.log('Navigated to verification page'))
+                .catch(err => console.error('Navigation error:', err));
+              return;
+            }
+          }
+          
+          // Rest of the authentication handling
           // Benutzerdaten aus Firestore laden
           console.log('Versuche Benutzerdaten zu laden für UID:', firebaseUser.uid);
             
@@ -185,6 +279,14 @@ export class AuthService implements OnDestroy {
             console.log('Benutzerrolle:', user.role);
             this._currentUser.set(user);
             localStorage.setItem('user_id', firebaseUser.uid);
+            
+            // Add this check to immediately navigate if we're on the login page or root
+            if (this.router.url === '/' || this.router.url === '/login') {
+              console.log('User on login or root page, navigating to dashboard');
+              this.router.navigate(['/dashboard'])
+                .then(() => console.log('Navigation to dashboard completed'))
+                .catch(err => console.error('Navigation error:', err));
+            }
           } else {
             // Create with retry logic if first attempt fails
             await this.createUserDocumentWithRetry(firebaseUser);
@@ -217,6 +319,19 @@ export class AuthService implements OnDestroy {
         }
       }
     });
+  }
+
+  /**
+   * Check if the current route is related to authentication
+   * @param url The current URL
+   * @returns A boolean indicating if the route is auth-related
+   * @private
+   */
+  private isAuthRoute(url: string): boolean {
+    return url.includes('/login') || 
+           url.includes('/register') || 
+           url.includes('/verify-email') ||
+           url.includes('/reset-password');
   }
 
   /**
@@ -368,20 +483,34 @@ export class AuthService implements OnDestroy {
    */
   private handleSuccessfulLogin(): void {
     // Get and sanitize returnUrl
-    let returnUrl = localStorage.getItem('returnUrl') || '/';
+    let returnUrl = localStorage.getItem('returnUrl') || '/dashboard'; // Default to dashboard instead of root
     
     // Don't allow redirecting back to auth pages
     if (returnUrl.includes('/login') || 
         returnUrl.includes('/register') || 
         returnUrl.includes('/verify-email') || 
         returnUrl.includes('/reset-password')) {
-      returnUrl = '/';
+      returnUrl = '/dashboard'; // Always redirect to dashboard instead of root path
     }
     
     // Clear returnUrl to prevent stale redirects on future logins
     localStorage.removeItem('returnUrl');
     console.log('Redirecting after login to:', returnUrl);
-    this.router.navigateByUrl(returnUrl);
+    
+    // Use a timeout to ensure the auth state is fully established before navigation
+    setTimeout(() => {
+      console.log('Executing delayed navigation to:', returnUrl);
+      this.router.navigateByUrl(returnUrl)
+        .then(() => console.log('Navigation successful'))
+        .catch(err => {
+          console.error('Navigation error:', err);
+          // Fall back to dashboard if the target route failed
+          if (returnUrl !== '/dashboard') {
+            console.log('Falling back to dashboard route');
+            this.router.navigateByUrl('/dashboard');
+          }
+        });
+    }, 100);
   }
 
   /**
@@ -812,5 +941,15 @@ export class AuthService implements OnDestroy {
     } catch (error) {
       console.error('Error updating user activity time:', error);
     }
+  }
+
+  /**
+   * Check if the current user has any of the specified roles
+   * @param allowedRoles Array of allowed roles
+   * @returns true if the user has any of the allowed roles
+   */
+  public hasRole(allowedRoles: User['role'][]): boolean {
+    const currentRole = this.userRole();
+    return !!currentRole && allowedRoles.includes(currentRole);
   }
 }

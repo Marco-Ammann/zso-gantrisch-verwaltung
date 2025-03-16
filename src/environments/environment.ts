@@ -8,6 +8,7 @@ export interface Environment {
     authDomain: string;
     messagingSenderId: string;
     measurementId: string;
+    databaseURL?: string;  // Add optional databaseURL property
   };
   useEmulators?: boolean;
   emulators?: {
@@ -16,18 +17,20 @@ export interface Environment {
     functions: string;
     storage: string;
   };
+  skipEmailVerification?: boolean; // Add this property
 }
 
 export const environment: Environment = {
-  production: true,
+  production: false,
   firebase: {
-    projectId: 'zso-gantrisch-verwaltung',
-    appId: '1:177544181049:web:0144e7e882ac3c443424e8',
-    storageBucket: 'zso-gantrisch-verwaltung.firebasestorage.app',
-    apiKey: 'AIzaSyAOaY0iUTYfQDolJjeI35jKZw8n34qCfzM',
-    authDomain: 'zso-gantrisch-verwaltung.firebaseapp.com',
-    messagingSenderId: '177544181049',
-    measurementId: 'G-QZDLMK6PRR',
+    apiKey: "AIzaSyAOaY0iUTYfQDolJjeI35jKZw8n34qCfzM",
+    authDomain: "zso-gantrisch-verwaltung.firebaseapp.com",
+    databaseURL: "https://zso-gantrisch-verwaltung-default-rtdb.firebaseio.com",
+    projectId: "zso-gantrisch-verwaltung",
+    storageBucket: "zso-gantrisch-verwaltung.firebasestorage.app",
+    messagingSenderId: "177544181049",
+    appId: "1:177544181049:web:0144e7e882ac3c443424e8",
+    measurementId: "G-QZDLMK6PRR"
   },
-  useEmulators: false
+  skipEmailVerification: false // Set to true if you want to bypass email verification during development
 };

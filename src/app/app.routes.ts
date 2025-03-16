@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, publicGuard, roleGuard } from './auth/guards/auth.guard';
+import { MainLayoutComponent } from './shared/layout/main-layout/main-layout.component';
 
 export const routes: Routes = [
   // Auth routes - accessible when not authenticated
@@ -39,13 +40,20 @@ export const routes: Routes = [
   },
   
   // All protected routes below - require authentication and email verification
+  // IMPORTANT: Wrap all protected routes in MainLayoutComponent
   {
     path: '',
+    component: MainLayoutComponent,
     canActivate: [authGuard],
     children: [
-      // Home/dashboard
+      // Home/dashboard - explicitly define both empty path and 'dashboard'
       {
         path: '',
+        loadComponent: () => import('./modules/dashboard/dashboard.component').then(m => m.DashboardComponent),
+        title: 'Dashboard - ZSO Gantrisch'
+      },
+      {
+        path: 'dashboard',
         loadComponent: () => import('./modules/dashboard/dashboard.component').then(m => m.DashboardComponent),
         title: 'Dashboard - ZSO Gantrisch'
       },
@@ -70,7 +78,6 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/ausbildungen/ausbildungen.routes').then(r => r.AUSBILDUNGEN_ROUTES),
         title: 'Ausbildungen - ZSO Gantrisch'
       },
-
 
       // Admin routes - require admin role
       {

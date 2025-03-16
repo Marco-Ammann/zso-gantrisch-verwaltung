@@ -9,6 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { checkActionCode } from '@angular/fire/auth'; // Import missing function
 
 @Component({
   selector: 'app-verify-email',
@@ -36,10 +37,13 @@ export class VerifyEmailComponent implements OnInit {
   // State
   isLoading = signal(false);
   isVerified = signal(false);
+  verificationInProgress = signal(false);
   errorMessage = signal<string | null>(null);
   email = signal<string>('');
   
   ngOnInit(): void {
+    console.log('VerifyEmailComponent initialized');
+    
     // Check if there's a code in the URL (coming from email link) or an email parameter
     this.route.queryParams.subscribe(params => {
       const oobCode = params['oobCode'];
@@ -53,9 +57,11 @@ export class VerifyEmailComponent implements OnInit {
       
       if (oobCode && mode === 'verifyEmail') {
         console.log('Verification code found, verifying email');
+        this.verificationInProgress.set(true);
         this.verifyEmail(oobCode);
       } else {
         console.log('No verification code found or not in verify mode');
+        this.verificationInProgress.set(false);
       }
     });
   }
@@ -67,7 +73,23 @@ export class VerifyEmailComponent implements OnInit {
     this.isLoading.set(true);
     
     try {
+      console.log('Applying action code for email verification');
+      
+      // First try to get email from code before applying it (for better logging)
+      try {
+        const actionInfo = await checkActionCode(this.authService.auth, code);
+        console.log('Action code info:', actionInfo);
+        if (actionInfo.data.email) {
+          this.email.set(actionInfo.data.email);
+          console.log('Email extracted from action code:', actionInfo.data.email);
+        }
+      } catch (e) {
+        console.error('Error checking action code:', e);
+      }
+      
+      // Apply the action code
       await this.authService.applyActionCode(code);
+      
       this.isVerified.set(true);
       this.snackBar.open(
         'E-Mail-Adresse erfolgreich verifiziert',
@@ -75,12 +97,8 @@ export class VerifyEmailComponent implements OnInit {
         { duration: 5000 }
       );
       
-      // If we have a current user, update their status in Firestore too
-      const currentUser = this.authService.auth.currentUser;
-      if (currentUser) {
-        await this.authService.updateUserEmailVerificationStatus(currentUser.uid);
-      }
     } catch (error) {
+      console.error('Error verifying email:', error);
       this.errorMessage.set('Der Bestätigungslink ist ungültig oder abgelaufen.');
     } finally {
       this.isLoading.set(false);

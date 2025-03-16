@@ -1,18 +1,14 @@
 import { ApplicationConfig } from '@angular/core';
 import { provideRouter, withRouterConfig } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { initializeApp } from '@angular/fire/app';
-import { getFirestore, connectFirestoreEmulator } from '@angular/fire/firestore';
-import { getAuth, connectAuthEmulator } from '@angular/fire/auth';
-import { getStorage, connectStorageEmulator } from '@angular/fire/storage';
 import { environment } from '../environments/environment';
 import { routes } from './app.routes';
 
-// Firebase modules
-import { provideFirebaseApp } from '@angular/fire/app';
-import { provideFirestore } from '@angular/fire/firestore';
-import { provideAuth } from '@angular/fire/auth';
-import { provideStorage } from '@angular/fire/storage';
+// Firebase modules - without emulator connections
+import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
+import { provideFirestore, getFirestore } from '@angular/fire/firestore';
+import { provideAuth, getAuth } from '@angular/fire/auth';
+import { provideStorage, getStorage } from '@angular/fire/storage';
 
 // This app config ensures that Firebase auth is properly initialized
 export const appConfig: ApplicationConfig = {
@@ -25,42 +21,57 @@ export const appConfig: ApplicationConfig = {
     })),
     provideAnimations(),
     
-    // Initialize Firebase app
+    // Initialize Firebase app with safer error handling
     provideFirebaseApp(() => {
-      const app = initializeApp(environment.firebase);
-      return app;
+      try {
+        console.log('Initializing Firebase app...');
+        const app = initializeApp(environment.firebase);
+        console.log('Firebase app initialized successfully');
+        return app;
+      } catch (error) {
+        console.error('Failed to initialize Firebase app:', error);
+        // Re-throw to ensure Angular knows initialization failed
+        throw error;
+      }
     }),
     
-    // Provide Firestore
+    // Provide Firestore with error handling
     provideFirestore(() => {
-      const firestore = getFirestore();
-      if (environment.useEmulators && environment.emulators) {
-        const firestoreHost = environment.emulators.firestore.split(':')[0];
-        const firestorePort = parseInt(environment.emulators.firestore.split(':')[1]);
-        connectFirestoreEmulator(firestore, firestoreHost, firestorePort);
+      try {
+        console.log('Initializing Firestore...');
+        const firestore = getFirestore();
+        console.log('Firestore initialized successfully');
+        return firestore;
+      } catch (error) {
+        console.error('Failed to initialize Firestore:', error);
+        throw error;
       }
-      return firestore;
     }),
     
-    // Provide Auth with persistence setup
+    // Provide Auth without emulator setup
     provideAuth(() => {
-      const auth = getAuth();
-      
-      if (environment.useEmulators && environment.emulators) {
-        connectAuthEmulator(auth, environment.emulators.auth);
+      try {
+        console.log('Initializing Auth...');
+        const auth = getAuth();
+        console.log('Auth initialized successfully');
+        return auth;
+      } catch (error) {
+        console.error('Failed to initialize Auth:', error);
+        throw error;
       }
-      return auth;
     }),
     
-    // Provide Storage
+    // Provide Storage without emulator setup
     provideStorage(() => {
-      const storage = getStorage();
-      if (environment.useEmulators && environment.emulators) {
-        const storageHost = environment.emulators.storage.split(':')[0];
-        const storagePort = parseInt(environment.emulators.storage.split(':')[1]);
-        connectStorageEmulator(storage, storageHost, storagePort);
+      try {
+        console.log('Initializing Storage...');
+        const storage = getStorage();
+        console.log('Storage initialized successfully');
+        return storage;
+      } catch (error) {
+        console.error('Failed to initialize Storage:', error);
+        throw error;
       }
-      return storage;
     })
   ],
 };

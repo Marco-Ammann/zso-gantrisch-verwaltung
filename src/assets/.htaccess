@@ -8,70 +8,30 @@
   RewriteRule . /index.html [L]
 </IfModule>
 
-# Enhanced cache control for better performance
-<IfModule mod_expires.c>
-  ExpiresActive On
-  
-  # Images
-  ExpiresByType image/jpg "access plus 1 year"
-  ExpiresByType image/jpeg "access plus 1 year"
-  ExpiresByType image/gif "access plus 1 year"
-  ExpiresByType image/png "access plus 1 year"
-  ExpiresByType image/webp "access plus 1 year"
-  ExpiresByType image/svg+xml "access plus 1 year"
-  ExpiresByType image/x-icon "access plus 1 year"
-  ExpiresByType image/vnd.microsoft.icon "access plus 1 year"
-  
-  # CSS/JS
-  ExpiresByType text/css "access plus 1 month"
-  ExpiresByType application/javascript "access plus 1 month"
-  ExpiresByType text/javascript "access plus 1 month"
-  
-  # Fonts
-  ExpiresByType font/ttf "access plus 1 year"
-  ExpiresByType font/otf "access plus 1 year"
-  ExpiresByType font/woff "access plus 1 year"
-  ExpiresByType font/woff2 "access plus 1 year"
-  ExpiresByType application/font-woff "access plus 1 year"
-  ExpiresByType application/font-woff2 "access plus 1 year"
-</IfModule>
-
-# Security headers
-<IfModule mod_headers.c>
-  # XSS Protection
-  Header set X-XSS-Protection "1; mode=block"
-  
-  # Prevent MIME type sniffing
-  Header set X-Content-Type-Options "nosniff"
-  
-  # Restrict iframe embedding to same origin
-  Header set X-Frame-Options "SAMEORIGIN"
-  
-  # Basic CSP policy
-  Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://apis.google.com https://www.googleapis.com https://*.firebaseio.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com; img-src 'self' data: https://*.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;"
-</IfModule>
-
-# Prevent viewing of .htaccess file
-<Files .htaccess>
-  Order allow,deny
-  Deny from all
-</Files>
-
 # Disable directory browsing
 Options -Indexes
 
-# GZIP compression for text files
-<IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE text/html
-  AddOutputFilterByType DEFLATE text/css
-  AddOutputFilterByType DEFLATE text/javascript
-  AddOutputFilterByType DEFLATE application/javascript
-  AddOutputFilterByType DEFLATE application/x-javascript
-  AddOutputFilterByType DEFLATE application/json
-  AddOutputFilterByType DEFLATE image/svg+xml
-  AddOutputFilterByType DEFLATE application/xml
-  AddOutputFilterByType DEFLATE text/xml
-  AddOutputFilterByType DEFLATE text/plain
-  AddOutputFilterByType DEFLATE font/woff
-  AddOutputFilterByType DEFLATE font/woff2
+# Less strict Content Security Policy that should work with Firebase
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-XSS-Protection "1; mode=block"
+  
+  # Very permissive CSP that should work in most scenarios
+  Header set Content-Security-Policy "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
+</IfModule>
+
+# Basic caching rules
+<IfModule mod_expires.c>
+  ExpiresActive On
+  
+  # Assets
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType application/font-woff "access plus 1 year"
+  ExpiresByType application/font-woff2 "access plus 1 year"
+  
+  # Scripts and styles
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
 </IfModule>

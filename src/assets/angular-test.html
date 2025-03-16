@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Angular Initialization Test</title>
+  <script>
+    // Load main.js and check for errors
+    window.addEventListener('error', function(e) {
+      document.getElementById('error-container').style.display = 'block';
+      document.getElementById('error-message').textContent = e.message;
+      document.getElementById('error-file').textContent = e.filename;
+      document.getElementById('error-line').textContent = e.lineno;
+      console.error('Script error:', e);
+      return false;
+    }, true);
+    
+    function loadMainScript() {
+      // Find the main.js file
+      fetch('/').then(response => response.text()).then(html => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const scripts = Array.from(doc.querySelectorAll('script')).filter(s => s.src && s.src.includes('main.'));
+        
+        if (scripts.length > 0) {
+          const mainScriptSrc = scripts[0].src;
+          document.getElementById('script-src').textContent = mainScriptSrc;
+          
+          // Try to load the script
+          const script = document.createElement('script');
+          script.src = mainScriptSrc;
+          script.onload = function() {
+            document.getElementById('success-container').style.display = 'block';
+          };
+          script.onerror = function(e) {
+            document.getElementById('error-container').style.display = 'block';
+            document.getElementById('error-message').textContent = 'Failed to load main script';
+            document.getElementById('error-file').textContent = mainScriptSrc;
+          };
+          document.body.appendChild(script);
+        } else {
+          document.getElementById('error-container').style.display = 'block';
+          document.getElementById('error-message').textContent = 'No main.js script found in index.html';
+        }
+      }).catch(err => {
+        document.getElementById('error-container').style.display = 'block';
+        document.getElementById('error-message').textContent = err.message;
+      });
+    }
+  </script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+    h1 { color: #FF7F00; }
+    .panel { background: #f5f5f5; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+    .success { color: green; display: none; }
+    .error { color: red; display: none; }
+    button { padding: 10px; background: #FF7F00; color: white; border: none; border-radius: 4px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Angular Initialization Test</h1>
+  
+  <div class="panel">
+    <h2>Test Angular Main Script</h2>
+    <p>This page will attempt to load the main Angular script to check if it loads correctly.</p>
+    <button onclick="loadMainScript()">Test main.js loading</button>
+    
+    <div id="success-container" class="success panel">
+      <h3>Success!</h3>
+      <p>The main script loaded successfully. Script source: <span id="script-src"></span></p>
+    </div>
+    
+    <div id="error-container" class="error panel">
+      <h3>Error!</h3>
+      <p>Message: <span id="error-message"></span></p>
+      <p>File: <span id="error-file"></span></p>
+      <p>Line: <span id="error-line"></span></p>
+    </div>
+  </div>
+  
+  <div class="panel">
+    <h2>Navigation</h2>
+    <p><a href="/">Back to main page</a></p>
+    <p><a href="/assets/diagnostics.html">Go to diagnostics page</a></p>
+  </div>
+</body>
+</html>

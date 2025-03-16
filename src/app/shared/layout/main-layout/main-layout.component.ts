@@ -30,9 +30,6 @@ export class MainLayoutComponent {
   sideNavOpened = signal<boolean>(true);
   isHandset = signal<boolean>(false);
   
-  // Signal für Authentifizierungsstatus
-  isAuthenticated = this.authService.isAuthenticated;
-  
   constructor() {
     // Auf Bildschirmgröße reagieren
     this.breakpointObserver.observe([

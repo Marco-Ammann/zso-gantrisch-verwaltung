@@ -8,15 +8,10 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "build:prod": "ng build --configuration production",
-    "build:analyze": "ng build --configuration production --stats-json && webpack-bundle-analyzer dist/zso-gantrisch-verwaltung/stats.json",
-    "build:modern": "ng build --configuration production --optimization true",
     "deploy": "npm run build:prod && node deploy-ftp.js",
     "deploy:clean": "npm run build:prod && node deploy-ftp.js --clean",
     "deploy:skip-build": "node deploy-ftp.js",
-    "deploy:skip-build:clean": "node deploy-ftp.js --clean",
-    "lint": "eslint \"src/**/*.ts\" --fix",
-    "check-env": "node -e \"require('dotenv').config(); console.log('Environment variables loaded successfully')\"",
-    "preview": "http-server dist/zso-gantrisch-verwaltung -o -c-1"
+    "deploy:skip-build:clean": "node deploy-ftp.js --clean"
   },
   "private": true,
   "dependencies": {

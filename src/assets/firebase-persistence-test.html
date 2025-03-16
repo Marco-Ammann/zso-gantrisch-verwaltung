@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Firebase Persistence Test</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+    h1 { color: #FF7F00; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .success { color: green; font-weight: bold; }
+    .warning { color: orange; font-weight: bold; }
+    .error { color: red; font-weight: bold; }
+    pre { background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    textarea { width: 100%; height: 150px; font-family: monospace; margin-bottom: 10px; }
+    button { padding: 10px 15px; background: #FF7F00; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px 0; }
+    button:hover { background: #E67300; }
+    .test-group { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+  </style>
+</head>
+<body>
+  <h1>Firebase Persistence Test Tool</h1>
+  
+  <div class="card">
+    <h2>Step 1: Enter Firebase Configuration</h2>
+    <p>Enter your Firebase configuration:</p>
+    <textarea id="config-input" placeholder='{
+  "apiKey": "YOUR_API_KEY",
+  "authDomain": "your-project.firebaseapp.com",
+  "projectId": "your-project",
+  "storageBucket": "your-project.appspot.com",
+  "messagingSenderId": "123456789012",
+  "appId": "1:123456789012:web:abc123def456"
+}'></textarea>
+    <button onclick="initializeFirebase()">Initialize Firebase</button>
+  </div>
+  
+  <div class="card">
+    <h2>Step 2: Test IndexedDB Availability</h2>
+    <div id="indexeddb-results">Click to test IndexedDB access</div>
+    <button onclick="testIndexedDB()">Test IndexedDB</button>
+  </div>
+  
+  <div class="card">
+    <h2>Step 3: Test Firebase Persistence</h2>
+    <div class="test-group">
+      <h3>Local Persistence</h3>
+      <div id="local-persistence-results">Not tested yet</div>
+      <button onclick="testPersistence('local')">Test Local Persistence</button>
+    </div>
+    
+    <div class="test-group">
+      <h3>Session Persistence</h3>
+      <div id="session-persistence-results">Not tested yet</div>
+      <button onclick="testPersistence('session')">Test Session Persistence</button>
+    </div>
+    
+    <div class="test-group">
+      <h3>None (In-Memory) Persistence</h3>
+      <div id="memory-persistence-results">Not tested yet</div>
+      <button onclick="testPersistence('none')">Test In-Memory Persistence</button>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Browser Information</h2>
+    <pre id="browser-info"></pre>
+  </div>
+  
+  <p><a href="/">Return to Application</a></p>
+  
+  <script>
+    // Display browser info
+    document.getElementById('browser-info').textContent = 
+      `User Agent: ${navigator.userAgent}\n` +
+      `Platform: ${navigator.platform}\n` +
+      `Cookies Enabled: ${navigator.cookieEnabled}\n` +
+      `Private Mode: ${isPrivateMode() ? "Yes (Likely)" : "No (Likely)"}\n` +
+      `localStorage Available: ${isLocalStorageAvailable() ? "Yes" : "No"}`;
+    
+    // Check for private browsing mode (approximate)
+    function isPrivateMode() {
+      try {
+        localStorage.setItem('test', 'test');
+        localStorage.removeItem('test');
+        return false;
+      } catch (e) {
+        return true;
+      }
+    }
+    
+    // Check localStorage availability
+    function isLocalStorageAvailable() {
+      try {
+        localStorage.setItem('test', 'test');
+        localStorage.removeItem('test');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+    
+    // Initialize Firebase with provided config
+    function initializeFirebase() {
+      try {
+        const configText = document.getElementById('config-input').value;
+        const config = JSON.parse(configText);
+        
+        // Initialize Firebase
+        firebase.initializeApp(config);
+        
+        alert('Firebase initialized successfully!');
+      } catch (error) {
+        alert(`Error initializing Firebase: ${error.message}`);
+      }
+    }
+    
+    // Test IndexedDB availability
+    function testIndexedDB() {
+      const resultsDiv = document.getElementById('indexeddb-results');
+      resultsDiv.innerHTML = '<p>Testing IndexedDB access...</p>';
+      
+      try {
+        if ('indexedDB' in window) {
+          const request = indexedDB.open('test-db', 1);
+          
+          request.onerror = function(event) {
+            resultsDiv.innerHTML = `<p class="error">❌ IndexedDB access denied: ${event.target.error}</p>
+                                  <p>This may be due to private browsing mode or browser settings.</p>`;
+          };
+          
+          request.onsuccess = function() {
+            resultsDiv.innerHTML = '<p class="success">✅ IndexedDB is accessible!</p>';
+            const db = request.result;
+            db.close();
+            // Try to delete the test database
+            try {
+              indexedDB.deleteDatabase('test-db');
+            } catch (e) {
+              // Ignore cleanup errors
+            }
+          };
+        } else {
+          resultsDiv.innerHTML = '<p class="error">❌ IndexedDB is not supported in this browser</p>';
+        }
+      } catch (error) {
+        resultsDiv.innerHTML = `<p class="error">❌ Error testing IndexedDB: ${error.message}</p>`;
+      }
+    }
+    
+    // Test Firebase persistence types
+    async function testPersistence(type) {
+      const resultsDiv = document.getElementById(`${type}-persistence-results`);
+      resultsDiv.innerHTML = `<p>Testing ${type} persistence...</p>`;
+      
+      try {
+        if (!firebase.apps.length) {
+          resultsDiv.innerHTML = '<p class="error">❌ Firebase not initialized. Please complete Step 1 first.</p>';
+          return;
+        }
+        
+        // Set the appropriate persistence type
+        let persistenceType;
+        switch (type) {
+          case 'local':
+            persistenceType = firebase.auth.Auth.Persistence.LOCAL;
+            break;
+          case 'session':
+            persistenceType = firebase.auth.Auth.Persistence.SESSION;
+            break;
+          case 'none':
+            persistenceType = firebase.auth.Auth.Persistence.NONE;
+            break;
+        }
+        
+        await firebase.auth().setPersistence(persistenceType);
+        resultsDiv.innerHTML = `<p class="success">✅ Successfully set ${type} persistence!</p>`;
+      } catch (error) {
+        resultsDiv.innerHTML = `<p class="error">❌ Error setting ${type} persistence: ${error.message}</p>
+                              <p class="warning">This indicates your browser may have limitations with Firebase authentication persistence.</p>`;
+      }
+    }
+  </script>
+</body>
+</html>

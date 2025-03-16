@@ -71,13 +71,13 @@ module.exports = {
   },
   plugins: [
     new CompressionPlugin({
-      filename: '[path][base].gz',
+      filename: '[path][base].gz',  // Creates .gz version of each file
       algorithm: 'gzip',
-      test: /\.(js|css|html|svg|txt|eot|otf|ttf|gif|png)$/,
-      threshold: 10240,
-      minRatio: 0.8,
+      test: /\.(js|css|html|svg|txt|eot|otf|ttf|gif|png)$/,  // Files to compress
+      threshold: 10240,  // Only compress files > 10KB
+      minRatio: 0.8,    // Only compress if it saves at least 20%
     }),
     // Only include BundleAnalyzerPlugin during analysis
-    ...(isAnalyze ? [new BundleAnalyzerPlugin()] : [])
+    ...(process.env.npm_lifecycle_script?.includes('--stats-json') ? [new BundleAnalyzerPlugin()] : [])
   ]
 };
