@@ -104,10 +104,7 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": [],
-            "allowedCommonJsDependencies": [
-              "lodash"
-            ]
+            "scripts": []
           }
         }
       }
