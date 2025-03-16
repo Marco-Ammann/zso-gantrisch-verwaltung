@@ -30,7 +30,81 @@
   min-width: 800px;
 }
 
-// For small screens in card view
+// Mobile alternative views
+.app-mobile-card-view {
+  display: none;
+}
+
+// Mobile card grid for better display on small screens
+.app-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  
+  .app-card {
+    border-radius: 8px;
+    overflow: hidden;
+    
+    &:hover {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+    
+    .app-card-header {
+      padding: 12px 16px;
+      color: white;
+      background-color: var(--app-primary-color, #1976d2);
+    }
+    
+    .app-card-content {
+      padding: 16px;
+      
+      .app-card-title {
+        font-size: 16px;
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+      
+      .app-card-detail {
+        display: flex;
+        align-items: center;
+        margin-bottom: 4px;
+        
+        mat-icon {
+          margin-right: 8px;
+          font-size: 16px;
+          height: 16px;
+          width: 16px;
+          color: #666;
+        }
+      }
+      
+      .app-card-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 16px;
+      }
+    }
+  }
+}
+
+// Device-specific styles
+@media (max-width: 960px) {
+  .app-hide-on-tablet {
+    display: none;
+  }
+  
+  // Optional: show card view on tablets
+  .app-show-cards-on-tablet .app-mobile-card-view {
+    display: block;
+  }
+  
+  .app-show-cards-on-tablet .app-responsive-table-container {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
   .app-card-grid {
     grid-template-columns: 1fr;
@@ -50,6 +124,33 @@
   }
 }
 
+@media (max-width: 599px) {
+  .app-hide-on-mobile {
+    display: none;
+  }
+  
+  // Show card view on mobile
+  .app-mobile-card-view {
+    display: block;
+  }
+  
+  .app-responsive-table-container {
+    display: none;
+  }
+  
+  .app-card-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .app-mobile-full-width {
+    width: 100%;
+  }
+  
+  .app-mobile-stack {
+    flex-direction: column;
+  }
+}
+
 // For extremely small screens (mobile)
 @media (max-width: 480px) {
   .app-mobile-hidden {
@@ -62,5 +163,51 @@
   
   .app-mobile-full-width {
     width: 100%;
+  }
+}
+
+// Optimization for large tables
+.app-table-optimized {
+  // Virtual scrolling optimization
+  &.cdk-virtual-scroll-viewport {
+    height: 500px;
+    width: 100%;
+  }
+}
+
+// Consistent status badges
+.app-status-badge {
+  padding: 4px 8px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  
+  &.app-status-active {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+  }
+  
+  &.app-status-inactive {
+    background-color: #f5f5f5;
+    color: #757575;
+  }
+  
+  &.app-status-attention {
+    background-color: #fff8e1;
+    color: #ff8f00;
+  }
+  
+  &.app-status-error {
+    background-color: #ffebee;
+    color: #c62828;
+  }
+  
+  mat-icon {
+    margin-right: 4px;
+    font-size: 14px;
+    height: 14px;
+    width: 14px;
   }
 }

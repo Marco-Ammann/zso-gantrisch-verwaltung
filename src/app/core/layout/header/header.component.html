@@ -1,0 +1,76 @@
+<mat-toolbar color="primary" class="app-header">
+  <div class="header-start">
+    <!-- Menu button only visible on mobile -->
+    <button 
+      mat-icon-button 
+      class="menu-button"
+      (click)="toggleSidenav()" 
+      aria-label="Menu öffnen">
+      <mat-icon>menu</mat-icon>
+    </button>
+    
+    <!-- App logo - hidden on very small screens -->
+    <a mat-button routerLink="/dashboard">
+      <mat-icon>dashboard</mat-icon>
+      <span>Dashboard</span>
+    </a>
+  </div>
+  
+  <!-- Search bar - hidden on very small screens -->
+  <div class="header-center" [class.hide-on-mobile]="isHandset()">
+    <!-- Placeholder for global search -->
+  </div>
+  
+  <div class="header-end">
+    <!-- Notifications button -->
+    <button 
+      mat-icon-button 
+      [matBadge]="notificationCount()" 
+      [matBadgeHidden]="notificationCount() === 0"
+      matBadgeColor="accent"
+      matTooltip="Benachrichtigungen"
+      (click)="goToNotifications()">
+      <mat-icon>notifications</mat-icon>
+    </button>
+    
+    <!-- Help button -->
+    <button 
+      mat-icon-button 
+      matTooltip="Hilfe"
+      (click)="goToHelp()">
+      <mat-icon>help</mat-icon>
+    </button>
+    
+    <!-- User menu -->
+    <button 
+      mat-button 
+      [matMenuTriggerFor]="userMenu" 
+      class="user-button">
+      <div class="user-avatar">{{ userInitials() }}</div>
+      <span class="user-name" [class.hide-on-mobile]="isHandset()">{{ auth.currentUser()?.displayName }}</span>
+      <mat-icon>arrow_drop_down</mat-icon>
+    </button>
+    
+    <mat-menu #userMenu="matMenu" xPosition="before">
+      <div class="user-menu-header">
+        <div class="user-info">
+          <div class="user-avatar large">{{ userInitials() }}</div>
+          <div class="user-details">
+            <div class="user-display-name">{{ auth.currentUser()?.displayName }}</div>
+            <div class="user-email">{{ auth.currentUser()?.email }}</div>
+            <div class="user-role">{{ userRole() }}</div>
+          </div>
+        </div>
+      </div>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="goToProfile()">
+        <mat-icon>person</mat-icon>
+        <span>Mein Profil</span>
+      </button>
+      <button mat-menu-item (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Abmelden</span>
+      </button>
+    </mat-menu>
+  </div>
+</mat-toolbar>

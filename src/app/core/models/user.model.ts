@@ -1,79 +1,38 @@
 /**
- * User model representing an authenticated user
+ * Basic Firebase User interface
  */
 export interface User {
-  /**
-   * Document ID in Firestore (optional as it may not be set during creation)
-   */
-  id?: string;
-
-  /**
-   * Unique identifier from Firebase Authentication
-   */
   uid: string;
-  
-  /**
-   * User's email address
-   */
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  emailVerified: boolean;
+  role?: string;
+  lastActive?: Date;
+  id?: string; // Document ID in Firestore
+  createdAt?: Date; // Creation timestamp
+  registrationDate?: Date; // Registration date
+  notificationSent?: boolean; // Flag for notifications
+}
+
+/**
+ * Extended user profile interface
+ */
+export interface UserProfile {
+  uid: string;
   email: string;
-  
-  /**
-   * Display name (optional)
-   */
-  displayName?: string;
-  
-  /**
-   * User role for authorization
-   */
-  role: 'admin' | 'oberleutnant' | 'leutnant' | 'korporal' | 'leserecht';
-  
-  /**
-   * Optional profile picture URL
-   */
+  displayName: string;
   photoURL?: string;
-  
-  /**
-   * Last login timestamp
-   */
-  lastLogin?: any;
-  
-  /**
-   * Last activity timestamp
-   */
-  lastActive?: any;
-  
-  /**
-   * Whether the user's email is verified
-   */
-  emailVerified?: boolean;
-  
-  /**
-   * When the user was created
-   */
-  createdAt?: any;
-  
-  /**
-   * When the user registered (might be different from createdAt in some cases)
-   */
-  registrationDate?: any;
-  
-  /**
-   * Indicates if an admin notification was sent for this user
-   */
-  notificationSent?: boolean;
-  
-  /**
-   * Whether email verification reminder was sent
-   */
-  verificationReminderSent?: boolean;
-  
-  /**
-   * When email verification reminder was sent
-   */
-  verificationReminderSentAt?: any;
-  
-  /**
-   * Additional metadata
-   */
-  metadata?: Record<string, any>;
+  phoneNumber?: string; // Adding the missing phoneNumber property
+  role?: string;
+  lastActive?: Date;
+}
+
+/**
+ * Profile update data interface
+ */
+export interface ProfileUpdateData {
+  displayName?: string;
+  photoURL?: string;
+  phoneNumber?: string;
 }

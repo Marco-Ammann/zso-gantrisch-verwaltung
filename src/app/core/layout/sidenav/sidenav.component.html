@@ -1,0 +1,73 @@
+<mat-sidenav-container class="sidenav-container">
+  <mat-sidenav #drawer class="sidenav" 
+               fixedInViewport
+               [attr.role]="(isHandset$ | async) ? 'dialog' : 'navigation'"
+               [mode]="(isHandset$ | async) ? 'over' : 'over'"
+               [opened]="(isHandset$ | async) === false && false"
+               [disableClose]="(isHandset$ | async) === false">
+    <div class="sidenav-header">
+      <div class="app-logo">
+        <img src="assets/images/logo.png" alt="ZSO Gantrisch Logo">
+        <span>ZSO Gantrisch</span>
+      </div>
+    </div>
+    
+    <mat-divider></mat-divider>
+    
+    <div class="sidenav-content">
+      <!-- Top level items without children -->
+      <mat-nav-list>
+        @for (item of navItems; track item.label) {
+          @if (!item.children && canView(item)) {
+            <a mat-list-item [routerLink]="item.route" 
+               routerLinkActive="active-link"
+               (click)="closeDrawer()">
+              <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+              <span matListItemTitle>{{ item.label }}</span>
+            </a>
+          }
+        }
+      </mat-nav-list>
+      
+      <!-- Items with children using expansion panels -->
+      <mat-accordion>
+        @for (item of navItems; track item.label) {
+          @if (item.children) {
+            <mat-expansion-panel class="nav-expansion">
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  <mat-icon>{{ item.icon }}</mat-icon>
+                  <span>{{ item.label }}</span>
+                </mat-panel-title>
+              </mat-expansion-panel-header>
+              
+              <mat-nav-list>
+                @for (child of item.children; track child.label) {
+                  @if (canView(child)) {
+                    <a mat-list-item [routerLink]="child.route" 
+                       routerLinkActive="active-link"
+                       (click)="closeDrawer()">
+                      <mat-icon matListItemIcon>{{ child.icon }}</mat-icon>
+                      <span matListItemTitle>{{ child.label }}</span>
+                    </a>
+                  }
+                }
+              </mat-nav-list>
+            </mat-expansion-panel>
+          }
+        }
+      </mat-accordion>
+    </div>
+    
+    <div class="sidenav-footer">
+      <mat-divider></mat-divider>
+      <div class="app-version">
+        <span>Version 1.0.0</span>
+      </div>
+    </div>
+  </mat-sidenav>
+  
+  <mat-sidenav-content>
+    <ng-content></ng-content>
+  </mat-sidenav-content>
+</mat-sidenav-container>

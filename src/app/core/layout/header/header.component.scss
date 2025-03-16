@@ -1,0 +1,143 @@
+.app-header {
+  height: 64px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  
+  // Elevation shadow
+  box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+.header-start {
+  display: flex;
+  align-items: center;
+  
+  .menu-button {
+    margin-right: 8px;
+  }
+  
+  .header-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: white;
+    
+    img {
+      height: 32px;
+      width: auto;
+    }
+    
+    .app-title {
+      font-size: 20px;
+      font-weight: 500;
+    }
+  }
+}
+
+.header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+}
+
+.header-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 24px;
+  
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .user-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background-color: white;
+    color: var(--mat-primary-default);
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  
+  .user-name {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+// User menu styles
+::ng-deep {
+  .user-menu-header {
+    padding: 16px;
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      
+      .user-avatar.large {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+        background-color: var(--mat-primary-default);
+        color: white;
+      }
+      
+      .user-details {
+        .user-display-name {
+          font-weight: 500;
+          font-size: 16px;
+        }
+        
+        .user-email {
+          font-size: 14px;
+          color: rgba(0, 0, 0, 0.6);
+          margin: 2px 0;
+        }
+        
+        .user-role {
+          font-size: 12px;
+          background-color: rgba(0, 0, 0, 0.1);
+          padding: 2px 8px;
+          border-radius: 12px;
+          display: inline-block;
+          margin-top: 4px;
+        }
+      }
+    }
+  }
+}
+
+// Responsive styles
+@media (max-width: 599px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+  
+  .app-header {
+    padding: 0 8px;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 959px) {
+  // Additional tablet specific styles if needed
+}

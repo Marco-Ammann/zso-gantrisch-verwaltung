@@ -1,51 +1,25 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
-import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
-import { filter, Subscription } from 'rxjs';
+import { Router, NavigationEnd, RouterOutlet } from '@angular/router';
+import { filter, Subscription, Observable } from 'rxjs';
 import { AuthService } from './auth/services/auth.service';
 import { IdleTimeoutService } from './core/services/idle-timeout.service';
 import { ErrorHandlingService } from './core/services/error-handling.service';
 import { CommonModule } from '@angular/common';
 import { RouteDiagnosticsService } from './core/services/route-diagnostics.service';
 import { environment } from '../environments/environment';
+import { LoadingService } from './core/services/loading.service';
+import { LoadingIndicatorComponent } from './shared/ui/loading-indicator/loading-indicator.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule],
-  template: `
-    <div *ngIf="isCheckingAuth" class="global-loading">
-      <div class="spinner"></div>
-      <p>Authentifizierung wird überprüft...</p>
-    </div>
-    <router-outlet></router-outlet>
-  `,
-  styles: [`
-    .global-loading {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background-color: #f5f5f5;
-      z-index: 1000;
-    }
-    .spinner {
-      width: 50px;
-      height: 50px;
-      border: 5px solid rgba(255, 127, 0, 0.3);
-      border-radius: 50%;
-      border-top-color: #FF7F00;
-      animation: spin 1s ease-in-out infinite;
-      margin-bottom: 20px;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-  `]
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    LoadingIndicatorComponent
+  ],
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
@@ -53,9 +27,12 @@ export class AppComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private errorHandler = inject(ErrorHandlingService);
   private routeDiagnostics = inject(RouteDiagnosticsService);
+  private loadingService = inject(LoadingService);
   
   title = 'ZSO Gantrisch Verwaltung';
   isCheckingAuth = true; // Add loading state
+  isLoading: Observable<boolean> = this.loadingService.loading$;
+  loadingMessage: Observable<string> = this.loadingService.message$;
   
   private subscriptions: Subscription[] = [];
   private initialAuthCheckDone = false;

@@ -63,7 +63,14 @@ export class HeaderComponent {
    * Zum Dashboard navigieren
    */
   navigateToDashboard(): void {
-    this.router.navigate(['/']);
+    console.log('Attempting to navigate to dashboard');
+    this.router.navigate(['/dashboard'])
+      .then(success => {
+        console.log('Navigation result:', success ? 'successful' : 'failed');
+      })
+      .catch(err => {
+        console.error('Navigation error:', err);
+      });
   }
   
   /**
@@ -82,14 +89,17 @@ export class HeaderComponent {
     
     if (!role) return '';
     
-    const roleNames: Record<User['role'], string> = {
+    // Fix the Record type to handle undefined role
+    const roleNames: Record<string, string> = {
       'admin': 'Administrator',
-      'oberleutnant': 'Oberleutnant',
-      'leutnant': 'Leutnant',
-      'korporal': 'Korporal',
-      'leserecht': 'Leserecht'
+      'editor': 'Editor',
+      'user': 'Benutzer',
+      // Add any other roles your app uses
     };
     
-    return roleNames[role] || role;
+    // Then use safely with nullish coalescing operator
+    const roleName = roleNames[role ?? ''] || 'Benutzer';
+    
+    return roleName;
   }
 }

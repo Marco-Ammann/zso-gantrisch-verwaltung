@@ -1,0 +1,117 @@
+<div class="profile-container">
+  <h1 class="profile-title">Mein Profil</h1>
+  
+  <!-- Loading state -->
+  <div *ngIf="isLoading()" class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Profildaten werden geladen...</p>
+  </div>
+  
+  <!-- Profile card -->
+  <mat-card *ngIf="!isLoading() && userProfile()" class="profile-card">
+    <mat-card-header>
+      <div mat-card-avatar class="profile-avatar" *ngIf="!isEditMode()">
+        <div *ngIf="userProfile()?.photoURL" class="avatar-image">
+          <img [src]="userProfile()?.photoURL" alt="Profilbild">
+        </div>
+        <div *ngIf="!userProfile()?.photoURL" class="avatar-initials">
+          {{ userProfile()?.displayName?.charAt(0) || 'U' }}
+        </div>
+      </div>
+      <mat-card-title>
+        <span *ngIf="!isEditMode()">{{ userProfile()?.displayName }}</span>
+        <span *ngIf="isEditMode()">Profil bearbeiten</span>
+      </mat-card-title>
+      <mat-card-subtitle *ngIf="!isEditMode()">
+        <div class="role-badge">{{ getUserRoleLabel() }}</div>
+      </mat-card-subtitle>
+    </mat-card-header>
+    
+    <mat-divider></mat-divider>
+    
+    <!-- Profile details in view mode -->
+    <mat-card-content *ngIf="!isEditMode()">
+      <div class="profile-details">
+        <div class="detail-item">
+          <div class="detail-label">
+            <mat-icon>email</mat-icon>
+            <span>E-Mail</span>
+          </div>
+          <div class="detail-value">{{ userProfile()?.email }}</div>
+        </div>
+        
+        <div class="detail-item">
+          <div class="detail-label">
+            <mat-icon>phone</mat-icon>
+            <span>Telefon</span>
+          </div>
+          <div class="detail-value">
+            {{ userProfile()?.phoneNumber || 'Keine Telefonnummer hinterlegt' }}
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+    
+    <!-- Edit profile form -->
+    <mat-card-content *ngIf="isEditMode()">
+      <form [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+        <div class="form-fields">
+          <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="displayName" placeholder="Ihr Name">
+            <mat-error *ngIf="profileForm.get('displayName')?.hasError('required')">
+              Name ist erforderlich
+            </mat-error>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline">
+            <mat-label>E-Mail</mat-label>
+            <input matInput formControlName="email" readonly>
+            <mat-icon matSuffix matTooltip="E-Mail kann nicht geändert werden">info</mat-icon>
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline">
+            <mat-label>Telefon</mat-label>
+            <input matInput formControlName="phoneNumber" placeholder="Ihre Telefonnummer">
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline">
+            <mat-label>Profilbild URL</mat-label>
+            <input matInput formControlName="photoURL" placeholder="URL zu Ihrem Profilbild">
+            <mat-icon matSuffix matTooltip="URL zu einem online verfügbaren Bild">help</mat-icon>
+          </mat-form-field>
+        </div>
+      </form>
+    </mat-card-content>
+    
+    <!-- Action buttons -->
+    <mat-card-actions>
+      <div *ngIf="!isEditMode()" class="action-buttons-view">
+        <button mat-raised-button color="primary" (click)="toggleEditMode()">
+          <mat-icon>edit</mat-icon>
+          Profil bearbeiten
+        </button>
+        <button mat-stroked-button color="primary" (click)="requestPasswordReset()">
+          <mat-icon>lock</mat-icon>
+          Passwort ändern
+        </button>
+      </div>
+      
+      <div *ngIf="isEditMode()" class="action-buttons-edit">
+        <button mat-stroked-button (click)="toggleEditMode()" [disabled]="isSaving()">
+          <mat-icon>cancel</mat-icon>
+          Abbrechen
+        </button>
+        <button 
+          mat-raised-button 
+          color="primary" 
+          (click)="saveProfile()" 
+          [disabled]="profileForm.invalid || isSaving()">
+          <mat-icon>save</mat-icon>
+          <span *ngIf="!isSaving()">Speichern</span>
+          <span *ngIf="isSaving()">Wird gespeichert...</span>
+        </button>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+</div>

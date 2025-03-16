@@ -83,7 +83,7 @@ export const routes: Routes = [
       {
         path: 'admin',
         loadChildren: () => import('./admin/admin.routes').then(r => r.ADMIN_ROUTES),
-        canActivate: [roleGuard(['admin'])],
+        canActivate: [roleGuard('admin')],
         title: 'Administration - ZSO Gantrisch'
       }
     ]

@@ -1,309 +1,300 @@
-import { Component, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
-import { AuthService } from '../../auth/services/auth.service';
-import { PersonService, AusbildungService, TeilnahmeService } from '../../core/services';
-
-// Material Imports
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { CommonModule, DatePipe } from '@angular/common';
+import { Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatDividerModule } from '@angular/material/divider';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { Ausbildung } from '../../core/models/ausbildung.model';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+
+import { AuthService } from '../../auth/services/auth.service';
+import { AusbildungService } from '../../core/services/ausbildung.service';
+import { PersonService } from '../../core/services/person.service';
+import { TeilnahmeService } from '../../core/services/teilnahme.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [
     CommonModule,
+    RouterModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressBarModule,
-    MatDividerModule,
+    MatTabsModule,
     MatTableModule,
-    MatTooltipModule,
     MatChipsModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatDividerModule,
+    MatTooltipModule,
+    MatProgressBarModule,
+    DatePipe
   ],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss']
+  styleUrls: ['./dashboard.component.scss'],
 })
-export class DashboardComponent {
-  private authService = inject(AuthService);
-  private personService = inject(PersonService);
-  private ausbildungService = inject(AusbildungService);
-  private teilnahmeService = inject(TeilnahmeService);
+export class DashboardComponent implements OnInit {
   private router = inject(Router);
-  anstehendeAusbildungen = signal<Ausbildung[]>([]);
-  
-  // Benutzer aus dem AuthService
-  currentUser = this.authService.currentUser;
-  
-  // Ladezustände
+  private authService = inject(AuthService);
+  private ausbildungService = inject(AusbildungService);
+  private personService = inject(PersonService);
+  private teilnahmeService = inject(TeilnahmeService);
+
+  // State signals
   isLoading = signal(true);
+  upcomingTrainings = signal<any[]>([]);
+  pastTrainings = signal<any[]>([]);
+  personCount = signal({ total: 0, aktiv: 0, inaktiv: 0, neu: 0 });
+  trainingStats = signal({ total: 0, thisYear: 0, upcoming: 0 });
+  recentParticipations = signal<any[]>([]);
   
-  // Statistiken
-  personenStats = signal({
-    total: 0,
-    aktiv: 0,
-    inaktiv: 0,
-    neu: 0
-  });
-  
-  ausbildungsStats = signal({
-    total: 0,
-    wk: 0,
-    lg: 0,
-    andere: 0,
-    aktuellesJahr: 0
-  });
-  
-  teilnahmeStats = signal({
-    total: 0,
-    teilgenommen: 0,
-    dispensiert: 0,
-    nichtTeilgenommen: 0,
-    teilnahmeQuote: 0
-  });
-  
-  // Kommende Ausbildungen
-  kommendeAusbildungen = signal<any[]>([]);
-  
-  // Letzte Ausbildungen mit Teilnahmen
-  letzteAusbildungen = signal<any[]>([]);
-  
-  // Aktuelle Woche und Datum
-  currentWeek = 'KW ' + this.getWeekNumber(new Date());
-  today = new Date();
-  
-  // Anzeige-Spalten für die Tabellen
-  displayedColumnsKommend = ['titel', 'typ', 'jahr', 'teilnehmer', 'aktionen'];
-  displayedColumnsLetzt = ['titel', 'typ', 'datum', 'teilnehmer', 'aktionen'];
-  
-  constructor() {
-    // Daten laden
-    this.loadData();
+  // User permissions
+  canEdit = this.authService.canEdit;
+  canDelete = this.authService.canDelete;
+  userName = signal('');
+  currentDate = new Date();
+
+  ngOnInit(): void {
+    // Set user name for greeting
+    const user = this.authService.currentUser();
+    if (user?.displayName) {
+      this.userName.set(user.displayName.split(' ')[0]);
+    }
+    
+    this.loadDashboardData();
   }
-  
+
   /**
-   * Lädt alle benötigten Daten
+   * Load all dashboard data including trainings, persons and participations
    */
-  async loadData(): Promise<void> {
+  async loadDashboardData(): Promise<void> {
     this.isLoading.set(true);
     
     try {
-      // Personen laden
-      await this.personService.loadPersonen();
-      const personen = this.personService.personen();
-      
-      // Personenstatistik berechnen
-      const personenCounts = this.personService.getPersonCountByStatus();
-      this.personenStats.set({
-        total: personen.length,
-        aktiv: personenCounts.aktiv,
-        inaktiv: personenCounts.inaktiv,
-        neu: personenCounts.neu
-      });
-      
-      // Ausbildungen laden
-      await this.ausbildungService.loadAusbildungen();
-      const ausbildungen = this.ausbildungService.ausbildungen();
-      
-      // Aktuelles Jahr
-      const currentYear = new Date().getFullYear();
-      
-      // Ausbildungsstatistik berechnen
-      const ausbildungenAktuellesJahr = ausbildungen.filter(a => a.jahr === currentYear);
-      const wkCount = ausbildungen.filter(a => a.typ === 'WK').length;
-      const lgCount = ausbildungen.filter(a => a.typ === 'LG').length;
-      
-      this.ausbildungsStats.set({
-        total: ausbildungen.length,
-        wk: wkCount,
-        lg: lgCount,
-        andere: ausbildungen.length - wkCount - lgCount,
-        aktuellesJahr: ausbildungenAktuellesJahr.length
-      });
-      
-      // Teilnahmen laden
-      await this.teilnahmeService.loadTeilnahmen();
-      const teilnahmen = this.teilnahmeService.teilnahmen();
-      
-      // Teilnahmestatistik berechnen
-      const teilgenommenCount = teilnahmen.filter(t => t.status === 'teilgenommen').length;
-      const dispensiertCount = teilnahmen.filter(t => t.status === 'dispensiert').length;
-      const nichtTeilgenommenCount = teilnahmen.filter(t => t.status === 'nicht teilgenommen').length;
-      
-      this.teilnahmeStats.set({
-        total: teilnahmen.length,
-        teilgenommen: teilgenommenCount,
-        dispensiert: dispensiertCount,
-        nichtTeilgenommen: nichtTeilgenommenCount,
-        teilnahmeQuote: teilnahmen.length > 0 ? Math.round((teilgenommenCount / teilnahmen.length) * 100) : 0
-      });
-      
-      // Kommende Ausbildungen (des aktuellen oder nächsten Jahres)
-      const kommend = ausbildungen
-        .filter(a => a.jahr >= currentYear)
-        .sort((a, b) => a.jahr - b.jahr || a.titel.localeCompare(b.titel))
-        .slice(0, 5)
-        .map(a => ({
-          ...a,
-          teilnehmerCount: teilnahmen.filter(t => t.ausbildungId === a.id).length
-        }));
-      
-      this.kommendeAusbildungen.set(kommend);
-      
-      // Letzte Ausbildungen mit Teilnahmen
-      const ausbildungenMitTeilnahmen = ausbildungen
-        .filter(a => teilnahmen.some(t => t.ausbildungId === a.id))
-        .map(a => {
-          const ausbildungsTeilnahmen = teilnahmen.filter(t => t.ausbildungId === a.id);
-          const letzteDatum = this.getLatestDate(ausbildungsTeilnahmen.map(t => t.datum));
-          
-          return {
-            ...a,
-            teilnehmerCount: ausbildungsTeilnahmen.length,
-            letztesDatum: letzteDatum
-          };
-        })
-        .sort((a, b) => {
-          if (!a.letztesDatum) return 1;
-          if (!b.letztesDatum) return -1;
-          return this.compareDates(b.letztesDatum, a.letztesDatum); // Absteigend sortieren
-        })
-        .slice(0, 5);
-      
-      this.letzteAusbildungen.set(ausbildungenMitTeilnahmen);
+      await Promise.all([
+        this.loadPersonData(),
+        this.loadTrainingData(),
+        this.loadParticipationData()
+      ]);
     } catch (error) {
-      console.error('Fehler beim Laden der Dashboard-Daten:', error);
+      console.error('Error loading dashboard data:', error);
     } finally {
       this.isLoading.set(false);
     }
   }
   
   /**
-   * Berechnet die Kalenderwoche
-   * @param date Datum
-   * @returns Kalenderwoche als Zahl
+   * Load person statistics for dashboard
    */
-  private getWeekNumber(date: Date): number {
-    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
-    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+  private async loadPersonData(): Promise<void> {
+    await this.personService.loadPersonen();
+    const persons = this.personService.personen();
+    
+    const counts = {
+      total: persons.length,
+      aktiv: persons.filter(p => p.zivilschutz.status === 'aktiv').length,
+      inaktiv: persons.filter(p => p.zivilschutz.status === 'inaktiv').length,
+      neu: persons.filter(p => p.zivilschutz.status === 'neu').length
+    };
+    
+    this.personCount.set(counts);
   }
   
   /**
-   * Gibt das neueste Datum aus einem Array von Datumsobjekten zurück
+   * Load training data and split into upcoming/past trainings
    */
-  private getLatestDate(dates: (Date | any)[]): Date | null {
-    if (!dates || dates.length === 0) return null;
+  private async loadTrainingData(): Promise<void> {
+    await this.ausbildungService.loadAusbildungen();
+    const ausbildungen = this.ausbildungService.ausbildungen();
+    const today = new Date();
+    const currentYear = today.getFullYear();
     
-    return dates.reduce((latest, current) => {
-      // Wenn current ein Firestore Timestamp ist
-      if (current && typeof current.toDate === 'function') {
-        current = current.toDate();
-      } else if (typeof current === 'string' || typeof current === 'number') {
-        current = new Date(current);
+    // Process all ausbildungen to determine upcoming and past
+    const upcoming: any[] = [];
+    const past: any[] = [];
+    let upcomingCount = 0;
+    let thisYearCount = 0;
+    
+    ausbildungen.forEach(ausbildung => {
+      // Choose which date field to use (either datum or startDatum)
+      let trainDate: Date;
+      if (ausbildung.startDatum && typeof ausbildung.startDatum.toDate === 'function') {
+        trainDate = ausbildung.startDatum.toDate();
+      } else if (ausbildung.datum && typeof ausbildung.datum.toDate === 'function') {
+        trainDate = ausbildung.datum.toDate();
+      } else {
+        // If no valid date, use a fallback
+        trainDate = new Date(ausbildung.jahr, 0, 1); // January 1st of the year
       }
       
-      if (!latest) return current;
-      
-      // Wenn latest ein Firestore Timestamp ist
-      if (latest && typeof latest.toDate === 'function') {
-        latest = latest.toDate();
-      } else if (typeof latest === 'string' || typeof latest === 'number') {
-        latest = new Date(latest);
+      if (trainDate.getFullYear() === currentYear) {
+        thisYearCount++;
       }
       
-      return current > latest ? current : latest;
-    }, null);
+      const isUpcoming = trainDate >= today;
+      const formattedItem = {
+        ...ausbildung,
+        formattedDate: this.formatDate(trainDate),
+        daysUntil: isUpcoming ? this.daysBetween(today, trainDate) : null,
+        daysAgo: !isUpcoming ? this.daysBetween(trainDate, today) : null,
+        trainDate: trainDate
+      };
+      
+      if (isUpcoming) {
+        upcomingCount++;
+        upcoming.push(formattedItem);
+      } else {
+        past.push(formattedItem);
+      }
+    });
+    
+    // Sort upcoming by date (ascending)
+    upcoming.sort((a, b) => a.trainDate - b.trainDate);
+    
+    // Sort past by date (descending)
+    past.sort((a, b) => b.trainDate - a.trainDate);
+    
+    // Take only the most recent trainings for display
+    this.upcomingTrainings.set(upcoming.slice(0, 5));
+    this.pastTrainings.set(past.slice(0, 5));
+    
+    // Update training stats
+    this.trainingStats.set({
+      total: ausbildungen.length,
+      thisYear: thisYearCount,
+      upcoming: upcomingCount
+    });
   }
   
   /**
-   * Vergleicht zwei Datumsobjekte
+   * Load recent participation data
    */
-  private compareDates(date1: any, date2: any): number {
-    // Konvertieren zu Date-Objekten, falls es sich um Timestamps handelt
-    let d1: Date;
-    let d2: Date;
+  private async loadParticipationData(): Promise<void> {
+    await this.teilnahmeService.loadTeilnahmen();
+    const teilnahmen = this.teilnahmeService.teilnahmen();
     
-    if (date1 && typeof date1.toDate === 'function') {
-      d1 = date1.toDate();
-    } else if (date1 instanceof Date) {
-      d1 = date1;
-    } else {
-      d1 = new Date(date1);
-    }
+    // Add person info to participations
+    const personsMap = new Map(
+      this.personService.personen().map(p => [p.id, p])
+    );
     
-    if (date2 && typeof date2.toDate === 'function') {
-      d2 = date2.toDate();
-    } else if (date2 instanceof Date) {
-      d2 = date2;
-    } else {
-      d2 = new Date(date2);
-    }
+    // Add ausbildung info to participations
+    const ausbildungenMap = new Map(
+      this.ausbildungService.ausbildungen().map(a => [a.id, a])
+    );
     
-    return d1.getTime() - d2.getTime();
+    // Combine data for display
+    const participationsWithDetails = teilnahmen
+      .filter(t => personsMap.has(t.personId) && ausbildungenMap.has(t.ausbildungId))
+      .map(t => {
+        const person = personsMap.get(t.personId)!;
+        const ausbildung = ausbildungenMap.get(t.ausbildungId)!;
+        
+        return {
+          ...t,
+          personName: `${person.grunddaten.grad} ${person.grunddaten.nachname} ${person.grunddaten.vorname}`,
+          ausbildungTitle: ausbildung.titel,
+          ausbildungTyp: ausbildung.typ,
+          formattedDate: this.formatDate(t.datum)
+        };
+      });
+    
+    // Sort by date (descending) and take only recent ones
+    participationsWithDetails.sort((a, b) => {
+      const dateA = this.getDateObject(a.datum);
+      const dateB = this.getDateObject(b.datum);
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    this.recentParticipations.set(participationsWithDetails.slice(0, 10));
   }
   
   /**
-   * Formatiert ein Datum für die Anzeige
+   * Helper to get JavaScript Date object from various date formats
+   */
+  private getDateObject(date: any): Date {
+    if (typeof date === 'object' && date !== null && typeof date.toDate === 'function') {
+      return date.toDate();
+    }
+    if (date instanceof Date) {
+      return date;
+    }
+    return new Date(date);
+  }
+
+  /**
+   * Calculate days between two dates
+   */
+  private daysBetween(date1: Date, date2: Date): number {
+    const oneDay = 24 * 60 * 60 * 1000; // milliseconds in a day
+    const diff = Math.abs(date2.getTime() - date1.getTime());
+    return Math.round(diff / oneDay);
+  }
+  
+  /**
+   * Format date for display
    */
   formatDate(date: any): string {
-    if (!date) return '-';
+    if (!date) return 'Kein Datum';
     
     try {
-      // Wenn date ein Firestore Timestamp ist
-      if (date && typeof date.toDate === 'function') {
-        return date.toDate().toLocaleDateString('de-CH');
+      let jsDate: Date;
+      if (typeof date.toDate === 'function') {
+        jsDate = date.toDate();
+      } else if (date instanceof Date) {
+        jsDate = date;
+      } else {
+        jsDate = new Date(date);
       }
       
-      // Wenn date ein Date-Objekt oder ein String ist
-      return new Date(date).toLocaleDateString('de-CH');
+      return jsDate.toLocaleDateString('de-CH', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
     } catch (error) {
-      return '-';
+      console.error('Error formatting date:', error);
+      return 'Ungültiges Datum';
     }
   }
   
   /**
-   * Navigiert zur Ausbildungsdetailansicht
+   * Navigate to persons list
    */
-  viewAusbildung(ausbildungId: string): void {
-    this.router.navigate(['/ausbildungen', ausbildungId]);
-  }
-  
-  /**
-   * Navigiert zur Teilnahmeerfassung
-   */
-  erfasseTeilnahme(ausbildungId: string): void {
-    this.router.navigate(['/ausbildungen/teilnahmen', ausbildungId]);
-  }
-  
-  /**
-   * Navigiert zur Personenliste
-   */
-  gotoPersonen(): void {
+  navigateToPersons(): void {
     this.router.navigate(['/personen']);
   }
   
   /**
-   * Navigiert zur Ausbildungsliste
+   * Navigate to trainings list
    */
-  gotoAusbildungen(): void {
+  navigateToTrainings(): void {
     this.router.navigate(['/ausbildungen']);
   }
   
   /**
-   * Navigiert zur Ausbildungsmatrix
+   * Navigate to training details
    */
-  gotoMatrix(): void {
-    this.router.navigate(['/ausbildungen/matrix']);
+  viewTraining(ausbildungId: string): void {
+    this.router.navigate(['/ausbildungen', ausbildungId]);
+  }
+  
+  /**
+   * Navigate to person details
+   */
+  viewPerson(personId: string): void {
+    this.router.navigate(['/personen', personId]);
+  }
+  
+  /**
+   * Get class for training type
+   */
+  getTypClass(typ: string): string {
+    return typ ? `typ-${typ}` : '';
   }
 }

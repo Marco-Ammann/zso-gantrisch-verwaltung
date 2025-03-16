@@ -1,320 +1,232 @@
 <!-- src/app/modules/dashboard/dashboard.component.html -->
 <div class="dashboard-container">
-  <div class="dashboard-header">
-    <h1 class="dashboard-title">Dashboard</h1>
-    <p class="dashboard-subtitle">Willkommen zurück, {{ currentUser()?.displayName || 'Benutzer' }}!</p>
-    <p class="dashboard-date">{{ currentWeek }} | {{ today | date:'dd.MM.yyyy' }}</p>
+  <div class="welcome-header">
+    <h1 class="greeting-title">Willkommen{{ userName() ? ', ' + userName() : '' }}!</h1>
+    <p class="current-date">{{ currentDate | date:'EEEE, d. MMMM yyyy' }}</p>
   </div>
   
-  @if (isLoading()) {
-    <div class="loading-container">
-      <mat-spinner diameter="40"></mat-spinner>
-      <p>Daten werden geladen...</p>
-    </div>
-  } @else {
-    <!-- Statistik-Kacheln -->
-    <div class="stats-container">
-      <!-- Personen-Statistik -->
-      <mat-card class="stat-card">
+  <!-- Loading state -->
+  <div *ngIf="isLoading()" class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Dashboard wird geladen...</p>
+  </div>
+  
+  <!-- Dashboard content after loading -->
+  <div *ngIf="!isLoading()" class="dashboard-content">
+    <!-- Stats cards -->
+    <div class="stat-cards">
+      <!-- Persons card -->
+      <mat-card class="stat-card person-card">
         <mat-card-content>
-          <div class="stat-icon-container people">
-            <mat-icon class="stat-icon people">people</mat-icon>
+          <div class="stat-icon">
+            <mat-icon>people</mat-icon>
           </div>
-          <div class="stat-content">
-            <span class="stat-value">{{ personenStats().total }}</span>
-            <span class="stat-label">Betreuer gesamt</span>
+          <div class="stat-info">
+            <div class="stat-title">Zivilschützer</div>
+            <div class="stat-value">{{ personCount().total }}</div>
             <div class="stat-details">
-              <div class="stat-detail">
-                <span class="detail-label">Aktiv:</span>
-                <span class="detail-value">{{ personenStats().aktiv }}</span>
-              </div>
-              <div class="stat-detail">
-                <span class="detail-label">Inaktiv:</span>
-                <span class="detail-value">{{ personenStats().inaktiv }}</span>
-              </div>
-              <div class="stat-detail">
-                <span class="detail-label">Neu:</span>
-                <span class="detail-value">{{ personenStats().neu }}</span>
-              </div>
+              <span class="status-chip aktiv">{{ personCount().aktiv }} Aktiv</span>
+              <span class="status-chip inaktiv">{{ personCount().inaktiv }} Inaktiv</span>
+              <span class="status-chip neu">{{ personCount().neu }} Neu</span>
             </div>
           </div>
         </mat-card-content>
+        <mat-divider></mat-divider>
+        <mat-card-actions>
+          <button mat-button color="primary" (click)="navigateToPersons()">
+            <mat-icon>visibility</mat-icon>
+            Personen anzeigen
+          </button>
+        </mat-card-actions>
       </mat-card>
       
-      <!-- Ausbildungs-Statistik -->
-      <mat-card class="stat-card">
+      <!-- Trainings card -->
+      <mat-card class="stat-card training-card">
         <mat-card-content>
-          <div class="stat-icon-container courses">
-            <mat-icon class="stat-icon courses">school</mat-icon>
+          <div class="stat-icon">
+            <mat-icon>school</mat-icon>
           </div>
-          <div class="stat-content">
-            <span class="stat-value">{{ ausbildungsStats().total }}</span>
-            <span class="stat-label">Ausbildungen gesamt</span>
+          <div class="stat-info">
+            <div class="stat-title">Ausbildungen</div>
+            <div class="stat-value">{{ trainingStats().total }}</div>
             <div class="stat-details">
-              <div class="stat-detail">
-                <span class="detail-label">WK:</span>
-                <span class="detail-value">{{ ausbildungsStats().wk }}</span>
-              </div>
-              <div class="stat-detail">
-                <span class="detail-label">LG:</span>
-                <span class="detail-value">{{ ausbildungsStats().lg }}</span>
-              </div>
-              <div class="stat-detail">
-                <span class="detail-label">Andere:</span>
-                <span class="detail-value">{{ ausbildungsStats().andere }}</span>
-              </div>
+              <span class="status-chip">{{ trainingStats().thisYear }} dieses Jahr</span>
+              <span class="status-chip upcoming">{{ trainingStats().upcoming }} bevorstehend</span>
             </div>
           </div>
         </mat-card-content>
-      </mat-card>
-      
-      <!-- Teilnahme-Statistik -->
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-icon-container tasks">
-            <mat-icon class="stat-icon tasks">assignment_turned_in</mat-icon>
-          </div>
-          <div class="stat-content">
-            <span class="stat-value">{{ teilnahmeStats().total }}</span>
-            <span class="stat-label">Teilnahmen gesamt</span>
-            <div class="stat-details">
-              <div class="stat-detail">
-                <span class="detail-label">Teilgenommen:</span>
-                <span class="detail-value">{{ teilnahmeStats().teilgenommen }}</span>
-              </div>
-              <div class="stat-detail">
-                <span class="detail-label">Dispensiert:</span>
-                <span class="detail-value">{{ teilnahmeStats().dispensiert }}</span>
-              </div>
-              <div class="stat-detail">
-                <span class="detail-label">Nicht teilgenommen:</span>
-                <span class="detail-value">{{ teilnahmeStats().nichtTeilgenommen }}</span>
-              </div>
-            </div>
-          </div>
-        </mat-card-content>
-      </mat-card>
-      
-      <!-- Teilnahmequote -->
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-icon-container capacity">
-            <mat-icon class="stat-icon capacity">trending_up</mat-icon>
-          </div>
-          <div class="stat-content">
-            <span class="stat-value">{{ teilnahmeStats().teilnahmeQuote }}%</span>
-            <span class="stat-label">Teilnahmequote</span>
-            <mat-progress-bar [value]="teilnahmeStats().teilnahmeQuote"></mat-progress-bar>
-          </div>
-        </mat-card-content>
+        <mat-divider></mat-divider>
+        <mat-card-actions>
+          <button mat-button color="primary" (click)="navigateToTrainings()">
+            <mat-icon>visibility</mat-icon>
+            Ausbildungen anzeigen
+          </button>
+        </mat-card-actions>
       </mat-card>
     </div>
     
-    <div class="dashboard-section">
-      <h2 class="section-title">Schnellzugriff</h2>
+    <!-- Upcoming trainings section -->
+    <div class="upcoming-trainings-section">
+      <div class="section-header">
+        <h2>Bevorstehende Ausbildungen</h2>
+        <button mat-stroked-button color="primary" (click)="navigateToTrainings()">
+          <mat-icon>calendar_month</mat-icon>
+          Alle anzeigen
+        </button>
+      </div>
       
-      <div class="quick-access-container">
-        <button mat-raised-button color="primary" class="quick-access-button" (click)="gotoPersonen()">
+      <div *ngIf="upcomingTrainings().length === 0" class="empty-section">
+        <mat-icon>event_busy</mat-icon>
+        <p>Keine bevorstehenden Ausbildungen</p>
+      </div>
+      
+      <div *ngIf="upcomingTrainings().length > 0" class="training-cards-grid">
+        <mat-card 
+          *ngFor="let training of upcomingTrainings()" 
+          class="training-event-card"
+          (click)="viewTraining(training.id)">
+          <div class="event-header" [ngClass]="getTypClass(training.typ)">
+            <span class="event-type">{{ training.typ }}</span>
+            <span class="event-days-left" *ngIf="training.daysUntil !== null">
+              <mat-icon>timer</mat-icon>
+              <span *ngIf="training.daysUntil === 0">Heute</span>
+              <span *ngIf="training.daysUntil === 1">Morgen</span>
+              <span *ngIf="training.daysUntil > 1">In {{ training.daysUntil }} Tagen</span>
+            </span>
+          </div>
+          <mat-card-content>
+            <h3 class="event-title">{{ training.titel }}</h3>
+            <div class="event-date">
+              <mat-icon>event</mat-icon>
+              <span>{{ training.formattedDate }}</span>
+            </div>
+          </mat-card-content>
+          <mat-divider></mat-divider>
+          <mat-card-actions>
+            <button mat-button color="primary">
+              <mat-icon>visibility</mat-icon>
+              Details
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+    </div>
+    
+    <!-- Recent activities section -->
+    <div class="dashboard-section">
+      <h2>Kürzliche Aktivitäten</h2>
+      
+      <mat-card>
+        <mat-tab-group>
+          <mat-tab label="Letzte Ausbildungen">
+            <div *ngIf="pastTrainings().length === 0" class="empty-tab-content">
+              <mat-icon>history_toggle_off</mat-icon>
+              <p>Keine abgeschlossenen Ausbildungen</p>
+            </div>
+            
+            <div *ngIf="pastTrainings().length > 0" class="past-trainings-list">
+              <div 
+                *ngFor="let training of pastTrainings()" 
+                class="past-training-item"
+                (click)="viewTraining(training.id)">
+                <div class="training-item-content">
+                  <div class="training-badge" [ngClass]="getTypClass(training.typ)">
+                    {{ training.typ }}
+                  </div>
+                  <div class="training-details">
+                    <div class="training-title">{{ training.titel }}</div>
+                    <div class="training-date">
+                      <mat-icon>event</mat-icon>
+                      <span>{{ training.formattedDate }}</span>
+                      <span class="days-ago" *ngIf="training.daysAgo">
+                        (vor {{ training.daysAgo }} {{ training.daysAgo === 1 ? 'Tag' : 'Tagen' }})
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button mat-icon-button color="primary">
+                  <mat-icon>chevron_right</mat-icon>
+                </button>
+              </div>
+            </div>
+          </mat-tab>
+          
+          <mat-tab label="Letzte Teilnahmen">
+            <div *ngIf="recentParticipations().length === 0" class="empty-tab-content">
+              <mat-icon>person_off</mat-icon>
+              <p>Keine Teilnahmen erfasst</p>
+            </div>
+            
+            <div *ngIf="recentParticipations().length > 0" class="recent-participations">
+              <div 
+                *ngFor="let participation of recentParticipations()" 
+                class="participation-item">
+                <div class="participation-item-content">
+                  <div class="participation-status" 
+                       [ngClass]="'status-' + participation.status">
+                    <mat-icon>
+                      {{ participation.status === 'teilgenommen' ? 'check_circle' : 
+                         participation.status === 'dispensiert' ? 'warning' : 'cancel' }}
+                    </mat-icon>
+                  </div>
+                  <div class="participation-details">
+                    <div class="participation-person" (click)="viewPerson(participation.personId); $event.stopPropagation()">
+                      {{ participation.personName }}
+                    </div>
+                    <div class="participation-training" (click)="viewTraining(participation.ausbildungId); $event.stopPropagation()">
+                      <span class="badge" [ngClass]="getTypClass(participation.ausbildungTyp)">
+                        {{ participation.ausbildungTyp }}
+                      </span>
+                      {{ participation.ausbildungTitle }}
+                    </div>
+                    <div class="participation-date">
+                      <mat-icon>event</mat-icon>
+                      {{ participation.formattedDate }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+      </mat-card>
+    </div>
+    
+    <!-- Quick actions section -->
+    <div class="quick-actions-section">
+      <h2>Schnellzugriff</h2>
+      
+      <div class="actions-grid">
+        <button mat-raised-button color="primary" [routerLink]="['/personen']">
           <mat-icon>people</mat-icon>
           Personen verwalten
         </button>
         
-        <button mat-raised-button color="primary" class="quick-access-button" (click)="gotoAusbildungen()">
+        <button mat-raised-button color="primary" [routerLink]="['/ausbildungen']">
           <mat-icon>school</mat-icon>
           Ausbildungen verwalten
         </button>
         
-        <button mat-raised-button color="primary" class="quick-access-button" (click)="gotoMatrix()">
-          <mat-icon>grid_on</mat-icon>
+        <button mat-raised-button color="primary" [routerLink]="['/ausbildungen/matrix']">
+          <mat-icon>grid_view</mat-icon>
           Ausbildungsmatrix
+        </button>
+        
+        <button mat-raised-button color="primary" [routerLink]="['/personen/notfallkontakte']">
+          <mat-icon>contacts</mat-icon>
+          Notfallkontakte
+        </button>
+        
+        <button *ngIf="canEdit()" mat-raised-button color="accent" [routerLink]="['/personen/neu']">
+          <mat-icon>person_add</mat-icon>
+          Neue Person
+        </button>
+        
+        <button *ngIf="canEdit()" mat-raised-button color="accent" [routerLink]="['/ausbildungen/neu']">
+          <mat-icon>add_circle</mat-icon>
+          Neue Ausbildung
         </button>
       </div>
     </div>
-    
-    <!-- Kommende Ausbildungen -->
-    <div class="dashboard-section">
-      <h2 class="section-title">Kommende Ausbildungen</h2>
-      
-      @if (kommendeAusbildungen().length === 0) {
-        <mat-card class="info-card">
-          <mat-card-content>
-            <p>Keine kommenden Ausbildungen gefunden.</p>
-          </mat-card-content>
-        </mat-card>
-      } @else {
-        <div class="table-container">
-          <table mat-table [dataSource]="kommendeAusbildungen()" class="ausbildungen-table">
-            <!-- Titel -->
-            <ng-container matColumnDef="titel">
-              <th mat-header-cell *matHeaderCellDef>Titel</th>
-              <td mat-cell *matCellDef="let ausbildung">
-                <div class="ausbildung-title">
-                  {{ ausbildung.titel }}
-                </div>
-                @if (ausbildung.beschreibung) {
-                  <div class="ausbildung-description">
-                    {{ ausbildung.beschreibung }}
-                  </div>
-                }
-              </td>
-            </ng-container>
-            
-            <!-- Typ -->
-            <ng-container matColumnDef="typ">
-              <th mat-header-cell *matHeaderCellDef>Typ</th>
-              <td mat-cell *matCellDef="let ausbildung">
-                <span class="typ-badge" [ngClass]="'typ-' + ausbildung.typ">
-                  {{ ausbildung.typ }}
-                </span>
-              </td>
-            </ng-container>
-            
-            <!-- Jahr -->
-            <ng-container matColumnDef="jahr">
-              <th mat-header-cell *matHeaderCellDef>Jahr</th>
-              <td mat-cell *matCellDef="let ausbildung">
-                {{ ausbildung.jahr }}
-              </td>
-            </ng-container>
-            
-            <!-- Teilnehmer -->
-            <ng-container matColumnDef="teilnehmer">
-              <th mat-header-cell *matHeaderCellDef>Teilnehmer</th>
-              <td mat-cell *matCellDef="let ausbildung">
-                <div class="teilnehmer-info">
-                  <mat-icon class="teilnehmer-icon">person</mat-icon>
-                  <span>{{ ausbildung.teilnehmerCount || 0 }}</span>
-                </div>
-              </td>
-            </ng-container>
-            
-            <!-- Aktionen -->
-            <ng-container matColumnDef="aktionen">
-              <th mat-header-cell *matHeaderCellDef>Aktionen</th>
-              <td mat-cell *matCellDef="let ausbildung">
-                <div class="table-actions">
-                  <button 
-                    mat-icon-button 
-                    color="primary" 
-                    matTooltip="Details anzeigen"
-                    (click)="viewAusbildung(ausbildung.id)">
-                    <mat-icon>visibility</mat-icon>
-                  </button>
-                  
-                  <button 
-                    mat-icon-button 
-                    color="accent" 
-                    matTooltip="Teilnahmen erfassen"
-                    (click)="erfasseTeilnahme(ausbildung.id)">
-                    <mat-icon>assignment_turned_in</mat-icon>
-                  </button>
-                </div>
-              </td>
-            </ng-container>
-            
-            <tr mat-header-row *matHeaderRowDef="displayedColumnsKommend"></tr>
-            <tr 
-              mat-row 
-              *matRowDef="let row; columns: displayedColumnsKommend;"
-              class="ausbildung-row"
-              (click)="viewAusbildung(row.id)">
-            </tr>
-          </table>
-        </div>
-      }
-    </div>
-    
-    <!-- Letzte Ausbildungen mit Teilnahmen -->
-    <div class="dashboard-section">
-      <h2 class="section-title">Letzte Ausbildungen mit Teilnahmen</h2>
-      
-      @if (letzteAusbildungen().length === 0) {
-        <mat-card class="info-card">
-          <mat-card-content>
-            <p>Keine Ausbildungen mit Teilnahmen gefunden.</p>
-          </mat-card-content>
-        </mat-card>
-      } @else {
-        <div class="table-container">
-          <table mat-table [dataSource]="letzteAusbildungen()" class="ausbildungen-table">
-            <!-- Titel -->
-            <ng-container matColumnDef="titel">
-              <th mat-header-cell *matHeaderCellDef>Titel</th>
-              <td mat-cell *matCellDef="let ausbildung">
-                <div class="ausbildung-title">
-                  {{ ausbildung.titel }}
-                </div>
-                @if (ausbildung.beschreibung) {
-                  <div class="ausbildung-description">
-                    {{ ausbildung.beschreibung }}
-                  </div>
-                }
-              </td>
-            </ng-container>
-            
-            <!-- Typ -->
-            <ng-container matColumnDef="typ">
-              <th mat-header-cell *matHeaderCellDef>Typ</th>
-              <td mat-cell *matCellDef="let ausbildung">
-                <span class="typ-badge" [ngClass]="'typ-' + ausbildung.typ">
-                  {{ ausbildung.typ }}
-                </span>
-              </td>
-            </ng-container>
-            
-            <!-- Datum -->
-            <ng-container matColumnDef="datum">
-              <th mat-header-cell *matHeaderCellDef>Letztes Datum</th>
-              <td mat-cell *matCellDef="let ausbildung">
-                {{ formatDate(ausbildung.letztesDatum) }}
-              </td>
-            </ng-container>
-            
-            <!-- Teilnehmer -->
-            <ng-container matColumnDef="teilnehmer">
-              <th mat-header-cell *matHeaderCellDef>Teilnehmer</th>
-              <td mat-cell *matCellDef="let ausbildung">
-                <div class="teilnehmer-info">
-                  <mat-icon class="teilnehmer-icon">person</mat-icon>
-                  <span>{{ ausbildung.teilnehmerCount || 0 }}</span>
-                </div>
-              </td>
-            </ng-container>
-            
-            <!-- Aktionen -->
-            <ng-container matColumnDef="aktionen">
-              <th mat-header-cell *matHeaderCellDef>Aktionen</th>
-              <td mat-cell *matCellDef="let ausbildung">
-                <div class="table-actions">
-                  <button 
-                    mat-icon-button 
-                    color="primary" 
-                    matTooltip="Details anzeigen"
-                    (click)="viewAusbildung(ausbildung.id)">
-                    <mat-icon>visibility</mat-icon>
-                  </button>
-                  
-                  <button 
-                    mat-icon-button 
-                    color="accent" 
-                    matTooltip="Teilnahmen erfassen"
-                    (click)="erfasseTeilnahme(ausbildung.id)">
-                    <mat-icon>assignment_turned_in</mat-icon>
-                  </button>
-                </div>
-              </td>
-            </ng-container>
-            
-            <tr mat-header-row *matHeaderRowDef="displayedColumnsLetzt"></tr>
-            <tr 
-              mat-row 
-              *matRowDef="let row; columns: displayedColumnsLetzt;"
-              class="ausbildung-row"
-              (click)="viewAusbildung(row.id)">
-            </tr>
-          </table>
-        </div>
-      }
-    </div>
-  }
+  </div>
 </div>

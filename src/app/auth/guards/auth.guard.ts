@@ -1,157 +1,155 @@
 import { Injectable, inject } from '@angular/core';
-import { CanActivateFn, Router, UrlTree } from '@angular/router';
+import { Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+import { map, Observable, of, tap } from 'rxjs';
 import { AuthService } from '../services/auth.service';
-import { map, take, catchError, tap } from 'rxjs/operators';
-import { Observable, of } from 'rxjs';
+import { LoadingService } from '../../core/services/loading.service';
 
 /**
- * Enhanced Auth Guard for protecting routes that require authentication AND email verification
+ * Function-based guards for Angular 16+ router
  */
-export const authGuard: CanActivateFn = (): Observable<boolean | UrlTree> => {
+export function authGuard() {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+  const loadingService = inject(LoadingService);
+
+  loadingService.show('Authentifizierung wird überprüft...');
+
+  if (!authService.isAuthenticated()) {
+    router.navigate(['/login']);
+    loadingService.hide();
+    return false;
+  }
+
+  loadingService.hide();
+  return true;
+}
+
+export function publicGuard() {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  console.log('Auth guard checking authentication status...');
+  if (authService.isAuthenticated()) {
+    router.navigate(['/dashboard']);
+    return false;
+  }
+  
+  return true;
+}
 
-  return authService.currentUser$.pipe(
-    take(1),
-    tap(user => console.log('Auth guard check - Current user:', user ? `${user.email} (${user.role})` : 'Not authenticated')),
-    map(user => {
-      // Save the intended destination for after login
-      const returnUrl = router.routerState.snapshot.url;
-      if (returnUrl && 
-          returnUrl !== '/login' && 
-          returnUrl !== '/register' &&
-          !returnUrl.includes('/verify-email') &&
-          !returnUrl.includes('/reset-password')) {
-        localStorage.setItem('returnUrl', returnUrl);
-        console.log('Auth guard: Saving return URL:', returnUrl);
-      }
-      
-      // If user is not authenticated, redirect to login
-      if (!user) {
-        console.log('Auth guard: User not authenticated, redirecting to login');
-        return router.createUrlTree(['/login']);
-      }
-      
-      // If user is authenticated but email is not verified, redirect to verification page
-      if (user && !user.emailVerified) {
-        console.log('Auth guard: Email not verified, redirecting to verify-email');
-        return router.createUrlTree(['/verify-email'], {
-          queryParams: { email: user.email }
-        });
-      }
-      
-      // User is authenticated and email is verified
-      console.log('Auth guard: User authenticated and verified, access granted');
-      return true;
-    }),
-    catchError(error => {
-      console.error('Error in auth guard:', error);
-      return of(router.createUrlTree(['/login']));
-    })
-  );
-};
-
-/**
- * Public Guard for routes that should only be accessible when not authenticated
- * (like login page, which shouldn't be shown to already authenticated users)
- */
-export const publicGuard: CanActivateFn = (): Observable<boolean | UrlTree> => {
-  const authService = inject(AuthService);
-  const router = inject(Router);
-
-  console.log('Public guard checking authentication status...');
-
-  return authService.isAuthenticated$.pipe(
-    take(1),
-    tap(isAuth => console.log('Public guard check - Is authenticated:', isAuth)),
-    map(isAuth => {
-      // If not authenticated, allow access to public routes
-      if (!isAuth) {
-        console.log('Public guard: User not authenticated, access granted');
-        return true;
-      }
-      
-      // If authenticated, check if email is verified
-      const user = authService.currentUser();
-      if (user && !user.emailVerified) {
-        console.log('Public guard: User authenticated but email not verified');
-        return router.createUrlTree(['/verify-email'], {
-          queryParams: { email: user.email }
-        });
-      }
-      
-      // If authenticated and email verified, redirect to dashboard explicitly
-      console.log('Public guard: User authenticated and verified, redirecting to dashboard');
-      return router.createUrlTree(['/dashboard']);
-    }),
-    catchError(error => {
-      console.error('Error in public guard:', error);
-      return of(true);
-    })
-  );
-};
-
-/**
- * Enhanced Role Guard for protecting routes based on user role
- * Now also verifies email before checking role
- * 
- * @param allowedRoles Array of roles that can access the route
- */
-export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
-  return (): Observable<boolean | UrlTree> => {
+// Update the roleGuard function to accept string or array
+export function roleGuard(requiredRole: 'admin' | 'editor' | string[]): () => boolean {
+  return () => {
     const authService = inject(AuthService);
     const router = inject(Router);
+    const loadingService = inject(LoadingService);
 
-    return authService.currentUser$.pipe(
-      take(1),
-      map(user => {
-        console.log('Role guard check - User:', user?.displayName, 'Role:', user?.role, 'Required roles:', allowedRoles);
-        
-        // Save the intended destination for after login
-        const returnUrl = router.routerState.snapshot.url;
-        if (returnUrl && 
-            returnUrl !== '/login' && 
-            returnUrl !== '/register' &&
-            !returnUrl.includes('/verify-email') &&
-            !returnUrl.includes('/reset-password')) {
-          localStorage.setItem('returnUrl', returnUrl);
+    // Show loading indicator
+    loadingService.show(`Berechtigungen werden überprüft...`);
+
+    // Get current role
+    const userRole = authService.userRole();
+    
+    // Handle different parameter types
+    let hasAccess = false;
+    
+    if (Array.isArray(requiredRole)) {
+      // If array of roles was passed, check if user has any of them
+      hasAccess = !!userRole && requiredRole.includes(userRole);
+    } else if (requiredRole === 'admin') {
+      // For admin role, only admin has access
+      hasAccess = userRole === 'admin';
+    } else if (requiredRole === 'editor') {
+      // For editor role, both admin and editor have access
+      hasAccess = userRole === 'admin' || userRole === 'editor';
+    }
+
+    // Hide loading and redirect if no access
+    if (!hasAccess) {
+      router.navigate(['/unauthorized']);
+      loadingService.hide();
+      return false;
+    }
+
+    loadingService.hide();
+    return true;
+  };
+}
+
+/**
+ * Legacy class-based Auth guard for routes that require authentication
+ */
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthGuard {
+  private authService = inject(AuthService);
+  private router = inject(Router);
+  private loadingService = inject(LoadingService);
+
+  canActivate(): Observable<boolean> {
+    this.loadingService.show('Authentifizierung wird überprüft...');
+    
+    return of(this.authService.isAuthenticated()).pipe(
+      tap(isAuthenticated => {
+        if (!isAuthenticated) {
+          this.router.navigate(['/login']);
         }
-        
-        // If user is not authenticated, redirect to login
-        if (!user) {
-          console.log('Role guard: User not authenticated, redirecting to login');
-          return router.createUrlTree(['/login']);
-        }
-        
-        // If user is authenticated but email not verified
-        if (!user.emailVerified) {
-          console.log('Role guard: Email not verified, redirecting to verify-email');
-          return router.createUrlTree(['/verify-email'], {
-            queryParams: { email: user.email }
-          });
-        }
-        
-        // If user has required role, grant access
-        if (user.role && allowedRoles.includes(user.role)) {
-          console.log('Role guard: User has required role, access granted');
-          return true;
-        }
-        
-        // If authenticated but wrong role, redirect to unauthorized page
-        console.log('Role guard: User does not have required role, access denied');
-        return router.createUrlTree(['/unauthorized'], {
-          queryParams: { 
-            requiredRole: allowedRoles.join(','), 
-            currentRole: user.role
-          }
-        });
-      }),
-      catchError(error => {
-        console.error('Error in role guard:', error);
-        return of(router.createUrlTree(['/login']));
+        this.loadingService.hide();
       })
     );
-  };
-};
+  }
+}
+
+/**
+ * Legacy class-based Editor guard for routes that require editor permissions
+ */
+@Injectable({
+  providedIn: 'root'
+})
+export class EditorGuard {
+  private authService = inject(AuthService);
+  private router = inject(Router);
+  private loadingService = inject(LoadingService);
+
+  canActivate(): Observable<boolean> {
+    this.loadingService.show('Berechtigungen werden überprüft...');
+    
+    // Fix: Use the signal value directly instead of userRole$
+    return of(this.authService.userRole()).pipe(
+      map(role => role === 'admin' || role === 'editor'),
+      tap(hasAccess => {
+        if (!hasAccess) {
+          this.router.navigate(['/unauthorized']);
+        }
+        this.loadingService.hide();
+      })
+    );
+  }
+}
+
+/**
+ * Legacy class-based Admin guard for routes that require admin permissions
+ */
+@Injectable({
+  providedIn: 'root'
+})
+export class AdminGuard {
+  private authService = inject(AuthService);
+  private router = inject(Router);
+  private loadingService = inject(LoadingService);
+
+  canActivate(): Observable<boolean> {
+    this.loadingService.show('Admin-Berechtigungen werden überprüft...');
+    
+    // Fix: Use the signal value directly instead of userRole$
+    return of(this.authService.userRole()).pipe(
+      map(role => role === 'admin'),
+      tap(isAdmin => {
+        if (!isAdmin) {
+          this.router.navigate(['/unauthorized']);
+        }
+        this.loadingService.hide();
+      })
+    );
+  }
+}

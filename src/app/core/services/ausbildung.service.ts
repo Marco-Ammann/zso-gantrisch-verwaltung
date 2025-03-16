@@ -3,12 +3,14 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { Ausbildung } from '../models/ausbildung.model';
 import { FirebaseService } from './firebase.service';
 import { toObservable } from '@angular/core/rxjs-interop';
+import { TeilnahmeService } from './teilnahme.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AusbildungService {
   private firebaseService = inject(FirebaseService);
+  private teilnahmeService = inject(TeilnahmeService); // Add missing dependency
   private collectionName = 'ausbildungen';
 
   // Signal für alle Ausbildungen
@@ -202,5 +204,24 @@ export class AusbildungService {
     return this._ausbildungen().filter(
       (ausbildung) => ausbildung.jahr === jahr
     );
+  }
+
+  /**
+   * Gets the number of unique participants for an ausbildung
+   * Ensures people who participate on multiple days are only counted once
+   */
+  async getUniqueParticipantCount(ausbildungId: string): Promise<number> {
+    const teilnahmen = await this.teilnahmeService.getTeilnahmenByAusbildung(ausbildungId);
+    
+    // Use a Set to track unique personIds
+    const uniquePersonIds = new Set<string>();
+    
+    teilnahmen.forEach(teilnahme => {
+      if (teilnahme.personId) {
+        uniquePersonIds.add(teilnahme.personId);
+      }
+    });
+    
+    return uniquePersonIds.size;
   }
 }

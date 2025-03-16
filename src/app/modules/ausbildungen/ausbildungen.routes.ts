@@ -1,70 +1,54 @@
 // src/app/modules/ausbildungen/ausbildungen.routes.ts
 import { Routes } from '@angular/router';
-import { authGuard, roleGuard } from '../../auth/guards/auth.guard';
+import { AusbildungenComponent } from './ausbildungen.component';
+import { AuthGuard, EditorGuard, AdminGuard, authGuard, roleGuard } from '../../auth/guards/auth.guard';
+import { AusbildungenListeComponent } from './ausbildungen-liste/ausbildungen-liste.component';
+import { AusbildungFormComponent } from './ausbildung-form/ausbildung-form.component';
+import { AusbildungsmatrixComponent } from './ausbildungsmatrix/ausbildungsmatrix.component';
+import { TeilnahmeErfassungComponent } from './teilnahme-erfassung/teilnahme-erfassung.component';
+import { AppellDurchfuehrungComponent } from './appell-durchfuehrung/appell-durchfuehrung.component';
+import { AusbildungDetailComponent } from './ausbildung-detail/ausbildung-detail.component';
 
 export const AUSBILDUNGEN_ROUTES: Routes = [
   {
     path: '',
-    loadComponent: () =>
-      import('./ausbildungen-liste/ausbildungen-liste.component').then(
-        (m) => m.AusbildungenListeComponent
-      ),
-    title: 'Ausbildungen - ZSO Gantrisch',
-    canActivate: [authGuard],
-  },
-  {
-    path: 'neu',
-    loadComponent: () =>
-      import('./ausbildung-form/ausbildung-form.component').then(
-        (m) => m.AusbildungFormComponent
-      ),
-    title: 'Neue Ausbildung - ZSO Gantrisch',
-    canActivate: [roleGuard(['admin', 'oberleutnant', 'leutnant'])],
-  },
-  {
-    path: 'matrix',
-    loadComponent: () =>
-      import('./ausbildungsmatrix/ausbildungsmatrix.component').then(
-        (m) => m.AusbildungsmatrixComponent
-      ),
-    title: 'Ausbildungsmatrix - ZSO Gantrisch',
-    canActivate: [authGuard],
-  },
-  {
-    path: ':id',
-    loadComponent: () =>
-      import('./ausbildung-detail/ausbildung-detail.component').then(
-        (m) => m.AusbildungDetailComponent
-      ),
-    title: 'Ausbildung Details - ZSO Gantrisch',
-    canActivate: [authGuard],
-  },
-  {
-    path: ':id/bearbeiten',
-    loadComponent: () =>
-      import('./ausbildung-form/ausbildung-form.component').then(
-        (m) => m.AusbildungFormComponent
-      ),
-    title: 'Ausbildung bearbeiten - ZSO Gantrisch',
-    canActivate: [roleGuard(['admin', 'oberleutnant', 'leutnant'])],
-  },
-  {
-    path: 'teilnahmen/:ausbildungId',
-    loadComponent: () =>
-      import('./teilnahme-erfassung/teilnahme-erfassung.component').then(
-        (m) => m.TeilnahmeErfassungComponent
-      ),
-    title: 'Teilnahmen erfassen - ZSO Gantrisch',
-    canActivate: [authGuard],
-    data: { roles: ['admin', 'oberleutnant', 'leutnant'] },
-  },
-  {
-    path: ':id/appell',
-    loadComponent: () =>
-      import('./appell-durchfuehrung/appell-durchfuehrung.component').then(
-        (m) => m.AppellDurchfuehrungComponent
-      ),
-    title: 'Appell durchführen - ZSO Gantrisch',
-    canActivate: [authGuard],
-  },
+    component: AusbildungenComponent,
+    children: [
+      {
+        path: '',
+        component: AusbildungenListeComponent,
+        canActivate: [AuthGuard]  // Using class-based guard
+      },
+      {
+        path: 'neu',
+        component: AusbildungFormComponent,
+        canActivate: [EditorGuard]  // Using class-based guard
+      },
+      {
+        path: 'matrix',
+        component: AusbildungsmatrixComponent,
+        canActivate: [AuthGuard]
+      },
+      {
+        path: 'teilnahmen/:id',
+        component: TeilnahmeErfassungComponent,
+        canActivate: [AuthGuard]
+      },
+      {
+        path: ':id/bearbeiten',
+        component: AusbildungFormComponent,
+        canActivate: [EditorGuard]
+      },
+      {
+        path: ':id/appell',
+        component: AppellDurchfuehrungComponent,
+        canActivate: [AuthGuard]
+      },
+      {
+        path: ':id',
+        component: AusbildungDetailComponent,
+        canActivate: [AuthGuard]
+      }
+    ]
+  }
 ];

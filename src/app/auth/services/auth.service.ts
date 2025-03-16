@@ -22,7 +22,7 @@ import {
   inMemoryPersistence
 } from '@angular/fire/auth';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { User } from '../../core/models/user.model';
+import { User, ProfileUpdateData, UserProfile } from '../../core/models/user.model';
 import { FirebaseService } from '../../core/services/firebase.service';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -362,6 +362,7 @@ export class AuthService implements OnDestroy {
         uid: firebaseUser.uid,
         email: firebaseUser.email || '',
         displayName: firebaseUser.displayName || '',
+        photoURL: firebaseUser.photoURL, // Add missing photoURL property
         role: 'leserecht', // Standardrolle
         emailVerified: firebaseUser.emailVerified,
         createdAt: new Date() // Add createdAt field for consistency
@@ -577,6 +578,7 @@ export class AuthService implements OnDestroy {
           uid: firebaseUser.uid,
           email: email,
           displayName: displayName,
+          photoURL: firebaseUser.photoURL, // Add missing photoURL property
           role: role,
           emailVerified: false,
           createdAt: new Date(),
@@ -951,5 +953,55 @@ export class AuthService implements OnDestroy {
   public hasRole(allowedRoles: User['role'][]): boolean {
     const currentRole = this.userRole();
     return !!currentRole && allowedRoles.includes(currentRole);
+  }
+
+  /**
+   * Gets a user's role from the database
+   * @param uid User ID
+   * @returns The user's role
+   */
+  async getUserRole(uid: string): Promise<string | null> {
+    try {
+      const userData = await this.firebaseService.getById<User>('users', uid);
+      // Fix: Add null check for userData
+      return userData && userData.role ? userData.role : null;
+    } catch (error) {
+      console.error('Error getting user role:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Updates the user profile
+   * @param profileData Profile data to update
+   * @returns Promise that resolves when profile is updated
+   */
+  async updateProfile(profileData: ProfileUpdateData): Promise<void> {
+    try {
+      const user = this.currentUser();
+      if (!user) throw new Error('No user logged in');
+
+      // Update in database
+      const users = await this.firebaseService.query<User>('users', 'uid', '==', user.uid);
+      if (users && users.length > 0 && users[0].id) {
+        await this.firebaseService.update('users', users[0].id, profileData);
+      } else {
+        throw new Error('User document not found');
+      }
+      
+      // Update local state
+      this._currentUser.update(currentUser => {
+        if (currentUser) {
+          return {
+            ...currentUser,
+            ...profileData
+          };
+        }
+        return currentUser;
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
   }
 }

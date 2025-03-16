@@ -63,7 +63,7 @@ export class SidebarComponent {
     {
       label: 'Dashboard',
       icon: 'dashboard',
-      route: '/',
+      route: '/dashboard',
       requiredRoles: ['admin', 'oberleutnant', 'leutnant', 'korporal', 'leserecht']
     },
     {

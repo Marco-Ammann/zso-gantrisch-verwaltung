@@ -1,0 +1,11 @@
+<!-- Global loading overlay -->
+<div *ngIf="isLoading | async" class="global-loading-overlay">
+  <app-loading-indicator 
+    [diameter]="50" 
+    [message]="(loadingMessage | async) || ''" 
+    [overlay]="true" 
+    [fullscreen]="true">
+  </app-loading-indicator>
+</div>
+
+<router-outlet></router-outlet>
