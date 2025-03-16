@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { 
   FormBuilder, 
@@ -21,6 +21,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
 // Import Password Reset Dialog Component
 import { PasswordResetDialogComponent } from '../password-reset-dialog/password-reset-dialog.component';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-login',
@@ -40,7 +41,7 @@ import { PasswordResetDialogComponent } from '../password-reset-dialog/password-
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private fb = inject(FormBuilder);
   private router = inject(Router);
@@ -59,6 +60,8 @@ export class LoginComponent {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
   
+  private subscriptions: Subscription[] = [];
+  
   /**
    * Initialisiert die Komponente und prüft, ob ein Redirect-URL vorhanden ist
    */
@@ -67,10 +70,18 @@ export class LoginComponent {
     this.authService.clearError();
     
     // Prüfen, ob ein redirect nach dem Login erfolgen soll
-    this.route.queryParams.subscribe(params => {
+    const paramSub = this.route.queryParams.subscribe(params => {
       if (params['returnUrl']) {
         localStorage.setItem('returnUrl', params['returnUrl']);
       }
+    });
+    this.subscriptions.push(paramSub);
+  }
+  
+  ngOnDestroy(): void {
+    // Clean up all subscriptions when component is destroyed
+    this.subscriptions.forEach(sub => {
+      if (sub) sub.unsubscribe();
     });
   }
   
@@ -98,12 +109,7 @@ export class LoginComponent {
         verticalPosition: 'bottom'
       });
 
-      // If login was successful and we get here (not redirected to verify email)
-      // Go ahead with the normal redirect flow
-      const returnUrl = localStorage.getItem('returnUrl') || '/';
-      console.log('Redirecting to:', returnUrl);
-      localStorage.removeItem('returnUrl');
-      this.router.navigateByUrl(returnUrl);
+      // Auth service handles the redirect now
     } catch (error) {
       // Fehlermeldung anzeigen
       this.errorMessage.set(this.authService.error() || 'Anmeldung fehlgeschlagen');
@@ -125,10 +131,15 @@ export class LoginComponent {
   }
   
   /**
-   * Navigate to registration page
+   * Navigate to registration page with clean state
    */
   goToRegister(): void {
-    this.router.navigate(['/register']);
+    // Clean up any pending operations 
+    this.isLoading.set(false);
+    this.errorMessage.set(null);
+    
+    // Use navigateByUrl for a cleaner navigation that avoids caching issues
+    this.router.navigateByUrl('/register');
   }
   
   /**

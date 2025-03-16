@@ -1,5 +1,5 @@
 import { ApplicationConfig } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withRouterConfig } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { initializeApp } from '@angular/fire/app';
 import { getFirestore, connectFirestoreEmulator } from '@angular/fire/firestore';
@@ -17,7 +17,12 @@ import { provideStorage } from '@angular/fire/storage';
 // This app config ensures that Firebase auth is properly initialized
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes),
+    // Improve router configuration to reduce caching issues
+    provideRouter(routes, withRouterConfig({
+      paramsInheritanceStrategy: 'always',
+      onSameUrlNavigation: 'reload', 
+      canceledNavigationResolution: 'replace'
+    })),
     provideAnimations(),
     
     // Initialize Firebase app

@@ -21,8 +21,7 @@ import {
   uploadBytesResumable,
   getDownloadURL,
 } from '@angular/fire/storage';
-import { Auth, onAuthStateChanged, User } from '@angular/fire/auth';
-import { BehaviorSubject } from 'rxjs';
+import { Auth, User } from '@angular/fire/auth';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 
@@ -41,16 +40,9 @@ export class FirebaseService {
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
 
-  private _isAuthenticated = new BehaviorSubject<boolean>(false);
-  public isAuthenticated$ = this._isAuthenticated.asObservable();
-  private currentUser: User | null = null;
-
   constructor() {
-    // Monitor auth state
-    onAuthStateChanged(this.auth, (user) => {
-      this.currentUser = user;
-      this._isAuthenticated.next(!!user);
-    });
+    // Removed duplicate auth state tracking
+    // Auth state is now only managed in AuthService
   }
 
   /**
@@ -73,7 +65,7 @@ export class FirebaseService {
                         currentUrl.includes('/verify-email') ||
                         currentUrl.includes('/reset-password');
     
-    if (!this.currentUser && !isAuthRoute) {
+    if (!this.auth.currentUser && !isAuthRoute) {
       console.error('User not authenticated. Operation aborted.');
       this.snackBar.open(
         'Sie müssen angemeldet sein, um diese Aktion auszuführen.',
@@ -82,14 +74,14 @@ export class FirebaseService {
       );
       this.router.navigate(['/login']);
       return false;
-    } else if (!this.currentUser && isAuthRoute) {
+    } else if (!this.auth.currentUser && isAuthRoute) {
       // On auth routes, allow operations even without authentication
       console.log('Auth route detected. Allowing operation without authentication.');
       return true;
     }
     
     // Add logging of the authentication state
-    console.log('Authentication check for collection:', collectionName, 'User:', this.currentUser?.uid || 'Not logged in');
+    console.log('Authentication check for collection:', collectionName, 'User:', this.auth.currentUser?.uid || 'Not logged in');
     return true;
   }
 

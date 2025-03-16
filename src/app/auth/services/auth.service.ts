@@ -126,14 +126,7 @@ export class AuthService implements OnDestroy {
   private initAuthListener(): void {
     console.log('Auth Listener initialisiert');
 
-    // Zusätzlich: Bei Startup prüfen, ob Benutzer im localStorage gespeichert ist
-    const savedUserId = localStorage.getItem('user_id');
-    if (savedUserId) {
-      console.log('Benutzer-ID im localStorage gefunden, Benutzer gilt als angemeldet');
-    }
-
-    // No delay - this can cause the logout issue on reload
-    // Instead, handle the auth state change immediately but carefully
+    // No timeout - this can cause the logout issue on reload
     this._authStateSubscription = authState(this.auth).subscribe(async (firebaseUser) => {
       console.log(
         'Auth State geändert:',
@@ -151,6 +144,8 @@ export class AuthService implements OnDestroy {
           if (!this.auth.currentUser) {
             console.log('After waiting, user is still not authenticated');
             this._currentUser.set(null);
+            localStorage.removeItem('user_id'); // Clear user ID when definitively logged out
+            localStorage.removeItem('returnUrl'); // Clear any stale return URL
             
             // Only redirect if not on an auth-related page
             const currentUrl = this.router.url;
@@ -336,7 +331,8 @@ export class AuthService implements OnDestroy {
       }
 
       console.log('Login successful, email is verified');
-      // User is authenticated, state service will handle the user state
+      // Handle successful login with proper redirect
+      this.handleSuccessfulLogin();
     } catch (error: any) {
       console.error('Login error:', error);
       
@@ -364,6 +360,28 @@ export class AuthService implements OnDestroy {
     } finally {
       this._isLoading.set(false);
     }
+  }
+
+  /**
+   * Handles a successful login by redirecting the user to the appropriate page
+   * @private
+   */
+  private handleSuccessfulLogin(): void {
+    // Get and sanitize returnUrl
+    let returnUrl = localStorage.getItem('returnUrl') || '/';
+    
+    // Don't allow redirecting back to auth pages
+    if (returnUrl.includes('/login') || 
+        returnUrl.includes('/register') || 
+        returnUrl.includes('/verify-email') || 
+        returnUrl.includes('/reset-password')) {
+      returnUrl = '/';
+    }
+    
+    // Clear returnUrl to prevent stale redirects on future logins
+    localStorage.removeItem('returnUrl');
+    console.log('Redirecting after login to:', returnUrl);
+    this.router.navigateByUrl(returnUrl);
   }
 
   /**
@@ -687,10 +705,44 @@ export class AuthService implements OnDestroy {
     
     try {
       await applyActionCode(this.auth, code);
+      
+      // Also update the Firestore user document if this was email verification
+      // and we have the current user
+      const currentUser = this.auth.currentUser;
+      if (currentUser) {
+        await this.updateUserEmailVerificationStatus(currentUser.uid);
+      }
     } catch (error: any) {
       console.error('Action code application error:', error);
       this._error.set('Ungültiger oder abgelaufener Code');
       throw error;
+    }
+  }
+
+  /**
+   * Updates Firestore user document with verified email status
+   * @param uid The user's UID
+   */
+  async updateUserEmailVerificationStatus(uid: string): Promise<void> {
+    try {
+      const users = await this.firebaseService.query<User>('users', 'uid', '==', uid);
+      
+      if (users && users.length > 0) {
+        const user = users[0];
+        if (user.id) {  // Add this check to ensure id is defined
+          await this.firebaseService.update('users', user.id, { 
+            emailVerified: true,
+            lastVerified: new Date()
+          });
+          console.log('Updated user email verification status in Firestore');
+        } else {
+          console.warn('User document exists but has no id field');
+        }
+      } else {
+        console.warn('No user document found for UID:', uid);
+      }
+    } catch (error) {
+      console.error('Error updating email verification status:', error);
     }
   }
 

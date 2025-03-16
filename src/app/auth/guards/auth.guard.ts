@@ -18,7 +18,11 @@ export const authGuard: CanActivateFn = (): Observable<boolean | UrlTree> => {
       
       // Save the intended destination for after login
       const returnUrl = router.routerState.snapshot.url;
-      if (returnUrl && returnUrl !== '/login' && returnUrl !== '/register') {
+      if (returnUrl && 
+          returnUrl !== '/login' && 
+          returnUrl !== '/register' &&
+          !returnUrl.includes('/verify-email') &&
+          !returnUrl.includes('/reset-password')) {
         localStorage.setItem('returnUrl', returnUrl);
         console.log('Auth guard: Saving return URL:', returnUrl);
       }
@@ -26,9 +30,7 @@ export const authGuard: CanActivateFn = (): Observable<boolean | UrlTree> => {
       // If user is not authenticated, redirect to login
       if (!user) {
         console.log('Auth guard: User not authenticated, redirecting to login');
-        return router.createUrlTree(['/login'], { 
-          queryParams: { returnUrl }
-        });
+        return router.createUrlTree(['/login']);
       }
       
       // If user is authenticated but email is not verified, redirect to verification page
@@ -106,16 +108,18 @@ export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
         
         // Save the intended destination for after login
         const returnUrl = router.routerState.snapshot.url;
-        if (returnUrl && returnUrl !== '/login' && returnUrl !== '/register') {
+        if (returnUrl && 
+            returnUrl !== '/login' && 
+            returnUrl !== '/register' &&
+            !returnUrl.includes('/verify-email') &&
+            !returnUrl.includes('/reset-password')) {
           localStorage.setItem('returnUrl', returnUrl);
         }
         
         // If user is not authenticated, redirect to login
         if (!user) {
           console.log('Role guard: User not authenticated, redirecting to login');
-          return router.createUrlTree(['/login'], { 
-            queryParams: { returnUrl }
-          });
+          return router.createUrlTree(['/login']);
         }
         
         // If user is authenticated but email not verified

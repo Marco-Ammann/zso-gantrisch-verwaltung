@@ -74,6 +74,12 @@ export class VerifyEmailComponent implements OnInit {
         'Schließen',
         { duration: 5000 }
       );
+      
+      // If we have a current user, update their status in Firestore too
+      const currentUser = this.authService.auth.currentUser;
+      if (currentUser) {
+        await this.authService.updateUserEmailVerificationStatus(currentUser.uid);
+      }
     } catch (error) {
       this.errorMessage.set('Der Bestätigungslink ist ungültig oder abgelaufen.');
     } finally {
