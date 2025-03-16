@@ -1,4 +1,6 @@
-export const environment = {
+import { Environment } from './environment';
+
+export const environment: Environment = {
     production: false,
     firebase: {
         projectId: 'zso-gantrisch-verwaltung',

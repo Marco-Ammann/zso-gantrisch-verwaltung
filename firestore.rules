@@ -1,56 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Basic authentication check
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    // Admin check - simplified to avoid circularity issues
-    function isAdmin() {
-      return isAuthenticated() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-    
-    // Check for edit roles - simplified to include roles 
-    function hasEditRole() {
-      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return userData.role == 'admin' || userData.role == 'oberleutnant' || userData.role == 'leutnant';
-    }
-    
-    // Read access - require only authentication
-    function hasReadAccess() {
-      return isAuthenticated();
-    }
-    
-    // Write access - require authentication and proper role
-    function hasWriteAccess() {
-      return isAuthenticated() && hasEditRole();
-    }
-    
-    // Users collection
-    match /users/{userId} {
-      // Allow any authenticated user to read users collection
-      allow read: if isAuthenticated();
-      
-      // Allow user creation by authenticated users (for registration)
-      allow create: if isAuthenticated();
-      
-      // Allow users to update their own document or admin to update any
-      allow update: if request.auth.uid == userId || isAdmin();
-      
-      // Only admin can delete users
-      allow delete: if isAdmin();
-    }
-    
-    // Default rules for all document collections (except users)
-    match /{collection}/{docId} {
-      // Allow read to any authenticated user
-      allow read: if isAuthenticated();
-      
-      // Allow write if authenticated and has a role with write permissions
-      allow write: if isAuthenticated() && hasEditRole();
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }

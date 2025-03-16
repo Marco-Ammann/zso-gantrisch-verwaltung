@@ -63,6 +63,9 @@ export class LoginComponent {
    * Initialisiert die Komponente und prüft, ob ein Redirect-URL vorhanden ist
    */
   ngOnInit(): void {
+    // Clear any previous errors to ensure a clean login experience
+    this.authService.clearError();
+    
     // Prüfen, ob ein redirect nach dem Login erfolgen soll
     this.route.queryParams.subscribe(params => {
       if (params['returnUrl']) {
@@ -94,16 +97,13 @@ export class LoginComponent {
         horizontalPosition: 'center',
         verticalPosition: 'bottom'
       });
-      
-      // Nach erfolgreicher Anmeldung direkt weiterleiten
-      // Verwende die setTimeout um sicherzustellen dass Angular die Navigation ausführt
-      // nach dem aktuellen Durchlauf des Change Detection Cycles
-      setTimeout(() => {
-        const returnUrl = localStorage.getItem('returnUrl') || '/';
-        console.log('Redirecting to:', returnUrl);
-        localStorage.removeItem('returnUrl');
-        this.router.navigateByUrl(returnUrl);
-      }, 0);
+
+      // If login was successful and we get here (not redirected to verify email)
+      // Go ahead with the normal redirect flow
+      const returnUrl = localStorage.getItem('returnUrl') || '/';
+      console.log('Redirecting to:', returnUrl);
+      localStorage.removeItem('returnUrl');
+      this.router.navigateByUrl(returnUrl);
     } catch (error) {
       // Fehlermeldung anzeigen
       this.errorMessage.set(this.authService.error() || 'Anmeldung fehlgeschlagen');

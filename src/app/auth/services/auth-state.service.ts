@@ -7,7 +7,7 @@ import { Auth, authState } from '@angular/fire/auth';
   providedIn: 'root'
 })
 export class AuthStateService {
-  private auth = inject(Auth); // Hier nutzen wir Angular Fire's Auth-Injektion
+  private auth = inject(Auth);
   private authStateSubject = new BehaviorSubject<boolean | null>(null);
   public authState$ = this.authStateSubject.asObservable();
 

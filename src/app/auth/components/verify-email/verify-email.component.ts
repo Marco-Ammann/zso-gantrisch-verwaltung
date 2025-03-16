@@ -40,13 +40,22 @@ export class VerifyEmailComponent implements OnInit {
   email = signal<string>('');
   
   ngOnInit(): void {
-    // Check if there's a code in the URL (coming from email link)
+    // Check if there's a code in the URL (coming from email link) or an email parameter
     this.route.queryParams.subscribe(params => {
       const oobCode = params['oobCode'];
       const mode = params['mode'];
+      const emailParam = params['email'];
+      
+      if (emailParam) {
+        console.log('Email parameter found:', emailParam);
+        this.email.set(emailParam);
+      }
       
       if (oobCode && mode === 'verifyEmail') {
+        console.log('Verification code found, verifying email');
         this.verifyEmail(oobCode);
+      } else {
+        console.log('No verification code found or not in verify mode');
       }
     });
   }
@@ -91,6 +100,7 @@ export class VerifyEmailComponent implements OnInit {
     this.isLoading.set(true);
     
     try {
+      console.log('Resending verification email to:', this.email());
       await this.authService.resendVerificationEmail(this.email());
       this.snackBar.open(
         'Bestätigungs-E-Mail wurde erneut gesendet.',
@@ -98,6 +108,7 @@ export class VerifyEmailComponent implements OnInit {
         { duration: 5000 }
       );
     } catch (error) {
+      console.error('Error resending verification email:', error);
       this.errorMessage.set(this.authService.error() || 'Fehler beim Senden der Bestätigungs-E-Mail.');
     } finally {
       this.isLoading.set(false);

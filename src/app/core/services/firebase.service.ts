@@ -65,8 +65,15 @@ export class FirebaseService {
     if (collectionName === 'users') {
       return true;
     }
-
-    if (!this.currentUser) {
+    
+    // Get current route to prevent redirect loops on authentication pages
+    const currentUrl = this.router.url;
+    const isAuthRoute = currentUrl.includes('/login') || 
+                        currentUrl.includes('/register') || 
+                        currentUrl.includes('/verify-email') ||
+                        currentUrl.includes('/reset-password');
+    
+    if (!this.currentUser && !isAuthRoute) {
       console.error('User not authenticated. Operation aborted.');
       this.snackBar.open(
         'Sie müssen angemeldet sein, um diese Aktion auszuführen.',
@@ -75,10 +82,14 @@ export class FirebaseService {
       );
       this.router.navigate(['/login']);
       return false;
+    } else if (!this.currentUser && isAuthRoute) {
+      // On auth routes, allow operations even without authentication
+      console.log('Auth route detected. Allowing operation without authentication.');
+      return true;
     }
     
     // Add logging of the authentication state
-    console.log('Authentication check for collection:', collectionName, 'User:', this.currentUser.uid);
+    console.log('Authentication check for collection:', collectionName, 'User:', this.currentUser?.uid || 'Not logged in');
     return true;
   }
 
@@ -335,11 +346,15 @@ export class FirebaseService {
     try {
       return await this.runInZone(async () => {
         const collectionRef = this.getCollection('users');
-        // Timestamp für Erstellung hinzufügen
+        
+        // Use the createdAt from the data if available, otherwise use the server timestamp
+        const timestamp = data.createdAt ? data.createdAt : serverTimestamp();
+        
         const docRef = await addDoc(collectionRef, {
           ...data,
-          erstelltAm: serverTimestamp(),
+          erstelltAm: timestamp, // Use consistent timestamp
         });
+        console.log('User document created with ID:', docRef.id);
         return docRef.id;
       });
     } catch (error) {

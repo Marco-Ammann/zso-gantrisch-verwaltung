@@ -18,7 +18,8 @@ import {
   verifyPasswordResetCode,
   updatePassword,
   EmailAuthProvider,
-  fetchSignInMethodsForEmail
+  fetchSignInMethodsForEmail,
+  inMemoryPersistence
 } from '@angular/fire/auth';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { User } from '../../core/models/user.model';
@@ -77,12 +78,45 @@ export class AuthService implements OnDestroy {
   public error$ = toObservable(this.error);
 
   constructor() {
+    // Initialize the auth listener first
     this.initAuthListener();
+    
+    // Then try to set persistence, but don't block the auth flow if it fails
+    this.setPersistenceToLocal()
+      .then(() => console.log('Firebase persistence set to LOCAL'))
+      .catch(err => console.error('Error setting persistence:', err));
   }
 
   ngOnDestroy() {
     if (this._authStateSubscription) {
       this._authStateSubscription.unsubscribe();
+    }
+  }
+
+  /**
+   * Set Firebase auth persistence to local storage
+   * This ensures the user stays logged in across page reloads and browser restarts
+   */
+  private async setPersistenceToLocal(): Promise<void> {
+    try {
+      const auth = getAuth();
+      
+      // First try to handle compatibility mode
+      try {
+        // For environments that support the standard persistence
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (e) {
+        if (e instanceof TypeError && e.message.includes('constructor')) {
+          // For environments with limitations, fall back to in-memory persistence
+          console.warn('Firebase persistence not fully supported in this environment, using fallback');
+          await setPersistence(auth, inMemoryPersistence);
+        } else {
+          throw e;
+        }
+      }
+    } catch (error) {
+      console.error('Error setting persistence:', error);
+      // Don't rethrow - we can still function with default persistence
     }
   }
 
@@ -98,69 +132,96 @@ export class AuthService implements OnDestroy {
       console.log('Benutzer-ID im localStorage gefunden, Benutzer gilt als angemeldet');
     }
 
-    // Verzögerung einbauen, um sicherzustellen, dass Firebase vollständig initialisiert ist
-    setTimeout(() => {
-      this._authStateSubscription = authState(this.auth).subscribe(async (firebaseUser) => {
-        console.log(
-          'Auth State geändert:',
-          firebaseUser ? 'Benutzer angemeldet' : 'Nicht angemeldet'
-        );
+    // No delay - this can cause the logout issue on reload
+    // Instead, handle the auth state change immediately but carefully
+    this._authStateSubscription = authState(this.auth).subscribe(async (firebaseUser) => {
+      console.log(
+        'Auth State geändert:',
+        firebaseUser ? `Benutzer angemeldet (${firebaseUser.uid})` : 'Nicht angemeldet'
+      );
 
-        if (firebaseUser) {
-          // Benutzerdaten aus Firestore laden
-          try {
-            console.log('Versuche Benutzerdaten zu laden für UID:', firebaseUser.uid);
+      // If there's no Firebase user but we have a saved user ID, wait a moment 
+      // before considering the user as logged out
+      if (!firebaseUser && localStorage.getItem('user_id')) {
+        console.log('Firebase user is null but saved user ID exists - waiting to see if auth initializes');
+        
+        // Give Firebase a chance to restore authentication
+        setTimeout(async () => {
+          // Check again if the user is still null after the timeout
+          if (!this.auth.currentUser) {
+            console.log('After waiting, user is still not authenticated');
+            this._currentUser.set(null);
             
-            // Log the token for debugging
-            const token = await firebaseUser.getIdToken(true); // Force refresh token
-            console.log('Auth token available:', !!token);
-            
-            const userDoc = await this.firebaseService.query<User>(
-              'users',
-              'uid',
-              '==',
-              firebaseUser.uid
-            );
-
-            if (userDoc && userDoc.length > 0) {
-              const user = userDoc[0];
-              console.log('Benutzerdaten geladen:', user);
-              console.log('Benutzerrolle:', user.role);
-              this._currentUser.set(user);
-              localStorage.setItem('user_id', firebaseUser.uid);
-            } else {
-              // Create with retry logic if first attempt fails
-              await this.createUserDocumentWithRetry(firebaseUser);
+            // Only redirect if not on an auth-related page
+            const currentUrl = this.router.url;
+            if (!currentUrl.includes('/login') && 
+                !currentUrl.includes('/register') && 
+                !currentUrl.includes('/verify-email') &&
+                !currentUrl.includes('/reset-password')) {
+              this.router.navigate(['/login']);
             }
-          } catch (error) {
-            console.error('Fehler beim Laden der Benutzerdaten:', error);
-            
-            // Try to create user document if query failed
-            try {
-              await this.createUserDocumentWithRetry(firebaseUser);
-            } catch (createError) {
-              console.error('Fehler beim Erstellen des Benutzerdokuments:', createError);
-              this._error.set('Fehler beim Laden der Benutzerdaten. Bitte neu anmelden.');
-              await this.logout();
-            }
+          } else {
+            console.log('User authenticated after timeout');
           }
-        } else {
-          // Benutzer ist nicht angemeldet
-          console.log('Benutzer abgemeldet');
-          this._currentUser.set(null);
-          localStorage.removeItem('user_id');
+        }, 2000); // Wait 2 seconds for Firebase to initialize
+        
+        return; // Exit early to give Firebase a chance
+      }
+
+      if (firebaseUser) {
+        try {
+          // Benutzerdaten aus Firestore laden
+          console.log('Versuche Benutzerdaten zu laden für UID:', firebaseUser.uid);
+            
+          // Log the token for debugging
+          const token = await firebaseUser.getIdToken(true); // Force refresh token
+          console.log('Auth token available:', !!token);
           
-          // Only redirect to login if we're not already on the login or related pages
-          const currentUrl = this.router.url;
-          if (!currentUrl.includes('/login') && 
-              !currentUrl.includes('/register') && 
-              !currentUrl.includes('/verify-email') &&
-              !currentUrl.includes('/reset-password')) {
-            this.router.navigate(['/login']);
+          const userDoc = await this.firebaseService.query<User>(
+            'users',
+            'uid',
+            '==',
+            firebaseUser.uid
+          );
+
+          if (userDoc && userDoc.length > 0) {
+            const user = userDoc[0];
+            console.log('Benutzerdaten geladen:', user);
+            console.log('Benutzerrolle:', user.role);
+            this._currentUser.set(user);
+            localStorage.setItem('user_id', firebaseUser.uid);
+          } else {
+            // Create with retry logic if first attempt fails
+            await this.createUserDocumentWithRetry(firebaseUser);
+          }
+        } catch (error) {
+          console.error('Fehler beim Laden der Benutzerdaten:', error);
+            
+          // Try to create user document if query failed
+          try {
+            await this.createUserDocumentWithRetry(firebaseUser);
+          } catch (createError) {
+            console.error('Fehler beim Erstellen des Benutzerdokuments:', createError);
+            this._error.set('Fehler beim Laden der Benutzerdaten. Bitte neu anmelden.');
+            await this.logout();
           }
         }
-      });
-    }, 500); // 500ms Verzögerung
+      } else {
+        // Benutzer ist nicht angemeldet
+        console.log('Benutzer abgemeldet');
+        this._currentUser.set(null);
+        localStorage.removeItem('user_id');
+        
+        // Only redirect to login if we're not already on the login or related pages
+        const currentUrl = this.router.url;
+        if (!currentUrl.includes('/login') && 
+            !currentUrl.includes('/register') && 
+            !currentUrl.includes('/verify-email') &&
+            !currentUrl.includes('/reset-password')) {
+          this.router.navigate(['/login']);
+        }
+      }
+    });
   }
 
   /**
@@ -171,12 +232,29 @@ export class AuthService implements OnDestroy {
   private async createUserDocumentWithRetry(firebaseUser: FirebaseUser, retries = 3): Promise<void> {
     try {
       console.log('Erstelle neues Benutzerdokument für:', firebaseUser.uid);
+      
+      // First check if the user document already exists to prevent duplicates
+      const existingUsers = await this.firebaseService.query<User>(
+        'users',
+        'uid',
+        '==',
+        firebaseUser.uid
+      );
+      
+      if (existingUsers && existingUsers.length > 0) {
+        console.log('Benutzerdokument existiert bereits, verwende vorhandenes');
+        this._currentUser.set(existingUsers[0]);
+        localStorage.setItem('user_id', firebaseUser.uid);
+        return;
+      }
+      
       const newUser: User = {
         uid: firebaseUser.uid,
         email: firebaseUser.email || '',
         displayName: firebaseUser.displayName || '',
         role: 'leserecht', // Standardrolle
-        emailVerified: firebaseUser.emailVerified
+        emailVerified: firebaseUser.emailVerified,
+        createdAt: new Date() // Add createdAt field for consistency
       };
 
       // Use the specialized method for adding user documents
@@ -228,9 +306,8 @@ export class AuthService implements OnDestroy {
     this._error.set(null);
 
     try {
-      // Hier nutzen wir direkt den Browser Local Persistence beim Anmelden
-      const auth = getAuth();
-      await setPersistence(auth, browserLocalPersistence);
+      // Ensure persistence is set to local
+      await this.setPersistenceToLocal();
 
       const userCredential = await signInWithEmailAndPassword(
         this.auth,
@@ -245,11 +322,20 @@ export class AuthService implements OnDestroy {
 
       // Check email verification
       if (!userCredential.user.emailVerified) {
+        console.log('User email not verified, redirecting to verification page');
         this._error.set('E-Mail-Adresse nicht bestätigt. Bitte überprüfen Sie Ihr E-Mail-Postfach.');
+        
+        // Redirect to verify email page before logout to preserve the auth context
+        this.router.navigate(['/verify-email'], { 
+          queryParams: { email: email }
+        });
+        
+        // Logout after navigation
         await this.logout();
         return;
       }
 
+      console.log('Login successful, email is verified');
       // User is authenticated, state service will handle the user state
     } catch (error: any) {
       console.error('Login error:', error);
@@ -309,33 +395,72 @@ export class AuthService implements OnDestroy {
       const firebaseUser = userCredential.user;
       console.log('Firebase auth user created, uid:', firebaseUser.uid);
 
-      // Anzeigename setzen
-      await updateProfile(firebaseUser, { displayName });
-      console.log('User profile updated with displayName');
+      // Anzeigename setzen - await here to ensure it completes
+      if (displayName) {
+        await updateProfile(firebaseUser, { displayName });
+        console.log('User profile updated with displayName:', displayName);
+      }
 
-      // Benutzerdaten in Firestore speichern
-      const newUser: User = {
-        uid: firebaseUser.uid,
-        email: email,
-        displayName: displayName,
-        role: role,
-        emailVerified: false,
-        createdAt: new Date()
-      };
+      // Check if user document already exists to prevent duplicates
+      const existingUsers = await this.firebaseService.query<User>(
+        'users',
+        'uid',
+        '==',
+        firebaseUser.uid
+      );
+      
+      let userId: string | undefined;
+      
+      if (existingUsers && existingUsers.length > 0) {
+        console.log('User document already exists during registration, updating it');
+        const existingUser = existingUsers[0];
+        if (existingUser.id) {
+          await this.firebaseService.update('users', existingUser.id, {
+            displayName: displayName,
+            role: role,
+            emailVerified: false, // Ensure email verification status is updated
+            registrationDate: new Date(),
+            notificationSent: false // Flag for notification tracking
+          });
+          userId = existingUser.id;
+        }
+      } else {
+        // Benutzerdaten in Firestore speichern
+        const newUser: User = {
+          uid: firebaseUser.uid,
+          email: email,
+          displayName: displayName,
+          role: role,
+          emailVerified: false,
+          createdAt: new Date(),
+          registrationDate: new Date(),
+          notificationSent: false // Flag for notification tracking
+        };
 
-      console.log('Adding user document to Firestore');
-      // Use the specialized method for adding user documents during registration
-      await this.firebaseService.addUserDocument(newUser);
-      console.log('User document added to Firestore');
+        console.log('Adding user document to Firestore');
+        // Use the specialized method for adding user documents during registration
+        userId = await this.firebaseService.addUserDocument(newUser);
+        console.log('User document added to Firestore with ID:', userId);
+      }
 
       // Send verification email
-      await this.sendEmailVerification(userCredential.user);
+      await this.sendEmailVerification(firebaseUser);
       console.log('Verification email sent');
+      
+      // Create a notification document for admin
+      if (userId) {
+        await this.createAdminNotification(userId, email, displayName || 'N/A');
+      }
       
       // Sign out the user immediately after registration
       // They need to verify their email first
       await this.logout();
       console.log('User logged out after registration');
+      
+      // Redirect to verify email page with their email prefilled
+      this.router.navigate(['/verify-email'], { 
+        queryParams: { email: email }
+      });
       
       return;
     } catch (error: any) {
@@ -365,17 +490,60 @@ export class AuthService implements OnDestroy {
   }
 
   /**
-   * Benutzer abmelden
+   * Create an admin notification document for a new user registration
+   * @param userId The ID of the user document
+   * @param email The email of the new user
+   * @param displayName The display name of the new user
+   */
+  private async createAdminNotification(userId: string, email: string, displayName: string): Promise<void> {
+    try {
+      await this.firebaseService.add('admin_notifications', {
+        type: 'new_user',
+        userId: userId,
+        email: email,
+        displayName: displayName,
+        createdAt: new Date(),
+        processed: false,
+        adminEmail: 'marco-ammann@outlook.com' // The admin email to notify
+      });
+      console.log('Admin notification created for new user registration');
+    } catch (error) {
+      console.error('Error creating admin notification:', error);
+    }
+  }
+
+  /**
+   * Benutzer abmelden und zum Login-Bildschirm zurückleiten
    * @returns Promise<void>
    */
   async logout(): Promise<void> {
+    console.log('Starting logout process');
     try {
+      // Clear all user-related data from local storage
       localStorage.removeItem('user_id');
+      localStorage.removeItem('returnUrl'); 
+      
+      // Sign out from Firebase
+      console.log('Signing out from Firebase');
       await signOut(this.auth);
-      this.router.navigate(['/login']);
+      
+      // Reset the current user in our service
+      this._currentUser.set(null);
+      
+      // Show success message to user
+      this.snackBar.open('Sie wurden erfolgreich abgemeldet', 'Schließen', {
+        duration: 3000
+      });
+      
+      console.log('Logout successful, redirecting to login page');
     } catch (error) {
-      console.error('Fehler beim Abmelden:', error);
-      throw error;
+      console.error('Error during logout:', error);
+      this.snackBar.open('Fehler beim Abmelden. Bitte versuchen Sie es erneut.', 'OK', {
+        duration: 5000
+      });
+    } finally {
+      // Always try to redirect to login, even if there were errors
+      this.router.navigate(['/login']);
     }
   }
 
@@ -387,7 +555,7 @@ export class AuthService implements OnDestroy {
    */
   async updateUserRole(uid: string, newRole: User['role']): Promise<void> {
     try {
-      const users = await this.firebaseService.query<User & { id: string }>(
+      const users = await this.firebaseService.query<User>(
         'users',
         'uid',
         '==',
@@ -396,41 +564,24 @@ export class AuthService implements OnDestroy {
 
       if (users && users.length > 0) {
         const user = users[0];
-        await this.firebaseService.update('users', user.id, { role: newRole });
+        if (user.id) {
+          await this.firebaseService.update('users', user.id, { role: newRole });
 
-        // Aktualisiere den aktuellen Benutzer, falls dieser betroffen ist
-        const currentUser = this._currentUser();
-        if (currentUser && currentUser.uid === uid) {
-          this._currentUser.update((user) =>
-            user ? { ...user, role: newRole } : null
-          );
+          // Aktualisiere den aktuellen Benutzer, falls dieser betroffen ist
+          const currentUser = this._currentUser();
+          if (currentUser && currentUser.uid === uid) {
+            this._currentUser.update((user) =>
+              user ? { ...user, role: newRole } : null
+            );
+          }
+        } else {
+          console.error('Cannot update user role: User document has no id field');
         }
       }
     } catch (error) {
       console.error('Fehler beim Aktualisieren der Benutzerrolle:', error);
       throw error;
     }
-  }
-
-  /**
-   * Prüft, ob der aktuelle Benutzer eine bestimmte Rolle hat
-   * @param roles Array von zulässigen Rollen
-   * @returns boolean
-   */
-  hasRole(roles: User['role'][]): boolean {
-    const currentRole = this.userRole();
-    return currentRole ? roles.includes(currentRole) : false;
-  }
-
-  /**
-   * Enhanced Role-Check Method
-   * @param requiredRoles Array of roles that are allowed
-   */
-  public hasRequiredRole(requiredRoles: string[]): boolean {
-    const currentRole = this.userRole();
-    const hasRole = currentRole ? requiredRoles.includes(currentRole) : false;
-    console.log(`Role check: User has role ${currentRole}, required one of [${requiredRoles.join(', ')}], result: ${hasRole}`);
-    return hasRole;
   }
 
   /**
@@ -590,6 +741,24 @@ export class AuthService implements OnDestroy {
       console.error('Resend verification email error:', error);
       this._error.set('Fehler beim Senden der Bestätigungs-E-Mail.');
       throw error;
+    }
+  }
+
+  /**
+   * Update the user's last activity timestamp
+   * This helps track when users are active
+   */
+  async updateLastActiveTime(): Promise<void> {
+    try {
+      const currentUser = this._currentUser();
+      if (currentUser && currentUser.id) {
+        await this.firebaseService.update('users', currentUser.id, { 
+          lastLogin: new Date(),
+          lastActive: new Date()
+        });
+      }
+    } catch (error) {
+      console.error('Error updating user activity time:', error);
     }
   }
 }
