@@ -107,11 +107,35 @@ export class NotfallkontakteComponent implements OnInit {
     });
   }
   
-  ngAfterViewInit() {
-    if (this.sort && this.paginator) {
-      this.dataSource.sort = this.sort;
-      this.dataSource.paginator = this.paginator;
-    }
+  ngAfterViewInit(): void {
+    // Set custom sorting logic
+    this.dataSource.sortingDataAccessor = (item: Notfallkontakt, property: string) => {
+      switch(property) {
+        case 'person':
+          return this.getPersonName(item.personId) || '';
+        case 'name':
+          return item.name || '';
+        case 'beziehung':
+          return item.beziehung || '';
+        case 'telefonnummer':
+          return item.telefonnummer || '';
+        case 'prioritaet':
+          return item.prioritaet || 0;
+        default:
+          return (item as any)[property] || '';
+      }
+    };
+    
+    // Now connect the sort and paginator
+    setTimeout(() => {
+      if (this.sort) {
+        this.dataSource.sort = this.sort;
+      }
+      
+      if (this.paginator) {
+        this.dataSource.paginator = this.paginator;
+      }
+    }, 100);
   }
   
   /**

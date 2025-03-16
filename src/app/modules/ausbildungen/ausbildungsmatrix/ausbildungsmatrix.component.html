@@ -49,8 +49,8 @@
       </div>
     } @else {
       <mat-card>
-        <div class="table-container">
-          <table mat-table [dataSource]="dataSource" matSort class="matrix-table">
+        <div class="app-responsive-table-container">
+          <table mat-table [dataSource]="dataSource" matSort class="app-responsive-table matrix-table">
             
             <!-- Name Column -->
             <ng-container matColumnDef="name">
@@ -108,7 +108,11 @@
         </div>
         
         <!-- Paginierung -->
-        <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" showFirstLastButtons></mat-paginator>
+        <mat-paginator 
+          [pageSizeOptions]="[10, 25, 50, 100]" 
+          showFirstLastButtons
+          aria-label="Matrixseiten auswählen">
+        </mat-paginator>
       </mat-card>
     }
   </div>

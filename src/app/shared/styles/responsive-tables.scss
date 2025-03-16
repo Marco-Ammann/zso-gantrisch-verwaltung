@@ -1,0 +1,66 @@
+/**
+ * Shared responsive table styles for the entire application
+ */
+
+// Responsive table container
+.app-responsive-table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+  
+  // Customized scrollbar for better UX
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+}
+
+// Table minimum width ensures readability on small screens with horizontal scroll
+.app-responsive-table {
+  width: 100%;
+  min-width: 800px;
+}
+
+// For small screens in card view
+@media (max-width: 768px) {
+  .app-card-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .app-card {
+    margin-bottom: 12px;
+  }
+  
+  .app-status-badge {
+    font-size: 0.7em;
+    padding: 3px 6px;
+  }
+  
+  .app-action-buttons {
+    flex-wrap: nowrap;
+  }
+}
+
+// For extremely small screens (mobile)
+@media (max-width: 480px) {
+  .app-mobile-hidden {
+    display: none;
+  }
+  
+  .app-mobile-flex-column {
+    flex-direction: column;
+  }
+  
+  .app-mobile-full-width {
+    width: 100%;
+  }
+}

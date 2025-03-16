@@ -139,6 +139,22 @@ export class AusbildungenListeComponent implements OnInit, OnDestroy {
   }
 
   ngAfterViewInit() {
+    // Set custom sorting logic
+    this.dataSource.sortingDataAccessor = (item: Ausbildung, property: string) => {
+      switch(property) {
+        case 'typ':
+          return item.typ || '';
+        case 'titel':
+          return item.titel || '';
+        case 'jahr':
+          return item.jahr || 0;
+        case 'erforderlich':
+          return item.erforderlich ? 'ja' : 'nein';
+        default:
+          return (item as any)[property] || '';
+      }
+    };
+
     if (this.sort && this.paginator) {
       this.dataSource.sort = this.sort;
       this.dataSource.paginator = this.paginator;

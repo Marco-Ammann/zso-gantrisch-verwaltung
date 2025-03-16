@@ -128,8 +128,8 @@
   
   <!-- Standard-Tabellenansicht -->
   <mat-card *ngIf="!isLoading && viewMode === 'table'">
-    <div class="table-container">
-      <table mat-table [dataSource]="dataSource" matSort class="notfallkontakte-table">
+    <div class="app-responsive-table-container">
+      <table mat-table [dataSource]="dataSource" matSort class="app-responsive-table notfallkontakte-table">
         <!-- Person -->
         <ng-container matColumnDef="person">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Person</th>
@@ -225,7 +225,8 @@
     <!-- Paginierung -->
     <mat-paginator 
       [pageSizeOptions]="[10, 25, 50, 100]"
-      showFirstLastButtons>
+      showFirstLastButtons
+      aria-label="Seiten auswählen">
     </mat-paginator>
   </mat-card>
 </div>

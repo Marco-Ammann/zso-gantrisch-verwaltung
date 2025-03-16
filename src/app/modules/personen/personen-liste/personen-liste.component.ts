@@ -1,11 +1,11 @@
 // src/app/modules/personen/personen-liste/personen-liste.component.ts
-import { Component, OnInit, inject, signal, computed, OnDestroy } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, OnDestroy, AfterViewInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatSortModule, Sort } from '@angular/material/sort';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSortModule, Sort, MatSort } from '@angular/material/sort';
+import { MatPaginatorModule, PageEvent, MatPaginator } from '@angular/material/paginator';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -52,7 +52,7 @@ import { ConfirmDialogComponent } from '../../../shared/ui/confirm-dialog/confir
   templateUrl: './personen-liste.component.html',
   styleUrls: ['./personen-liste.component.scss'],
 })
-export class PersonenListeComponent implements OnInit, OnDestroy {
+export class PersonenListeComponent implements OnInit, AfterViewInit, OnDestroy {
   private personService = inject(PersonService);
   private authService = inject(AuthService);
   private router = inject(Router);
@@ -60,6 +60,9 @@ export class PersonenListeComponent implements OnInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
   private breakpointObserver = inject(BreakpointObserver);
   private destroy$ = new Subject<void>();
+
+  @ViewChild(MatSort) sort!: MatSort;
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   // Rechte basierend auf der Benutzerrolle
   canEdit = this.authService.canEdit;
@@ -132,6 +135,28 @@ export class PersonenListeComponent implements OnInit, OnDestroy {
       });
   }
 
+  // Add this lifecycle hook to properly connect sort and paginator
+  ngAfterViewInit(): void {
+    // Configure the custom sorting logic before connecting to MatSort
+    this.configureTableSorting();
+    
+    // Explicitly set a delay value for setTimeout
+    setTimeout(() => {
+      if (this.sort) {
+        this.dataSource.sort = this.sort;
+      }
+      
+      if (this.paginator) {
+        this.dataSource.paginator = this.paginator;
+      }
+      
+      // Re-apply filter after sort/paginator are connected
+      if (this.dataSource.data.length > 0) {
+        this.applyFilter();
+      }
+    }, 100); // Use a small delay
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
@@ -166,6 +191,15 @@ export class PersonenListeComponent implements OnInit, OnDestroy {
   async loadPersonen(): Promise<void> {
     try {
       await this.personService.loadPersonen();
+      
+      // Using the personen property instead of a non-existent getPersonen() method
+      // The error message indicates personen is the correct property to use
+      console.log('PersonService loaded:', this.personService.personen().length); // Debug log
+      
+      // Assign data to dataSource before applying filter
+      this.dataSource.data = this.personService.personen();
+      
+      // Now apply the filter
       this.applyFilter();
     } catch (error) {
       console.error('Fehler beim Laden der Personen:', error);
@@ -177,20 +211,37 @@ export class PersonenListeComponent implements OnInit, OnDestroy {
    * Filter anwenden basierend auf Suchbegriff und Status
    */
   applyFilter(): void {
-    const status = this.selectedStatus();
-
-    // Gefilterte Personen vom Service bekommen
-    let filteredPersonen = this.personService.filteredPersonen();
-
-    // Status-Filter anwenden, wenn nicht "alle"
-    if (status !== 'alle') {
-      filteredPersonen = filteredPersonen.filter(
-        (person) => person.zivilschutz.status === status
-      );
+    // Set up filter predicate first
+    this.dataSource.filterPredicate = (data: Person, filter: string) => {
+      // Debug log to see what items are being filtered
+      console.log('Filtering person:', data.grunddaten.nachname, 'with status:', data.zivilschutz.status);
+      
+      const searchStr = [
+        data.grunddaten.grad,
+        data.grunddaten.nachname,
+        data.grunddaten.vorname,
+        data.grunddaten.funktion,
+        data.kontaktdaten.ort,
+        data.kontaktdaten.email,
+        data.zivilschutz.einteilung.zug?.toString() || ''
+      ].filter(Boolean).join(' ').toLowerCase();
+      
+      const matchesSearch = !filter || searchStr.includes(filter);
+      const matchesStatus = this.selectedStatus() === 'alle' || data.zivilschutz.status === this.selectedStatus();
+      
+      return matchesSearch && matchesStatus;
+    };
+    
+    const filterValue = this.searchControl.value || '';
+    // Apply filter only once
+    this.dataSource.filter = filterValue.trim().toLowerCase();
+    
+    if (this.dataSource.paginator) {
+      this.dataSource.paginator.firstPage();
     }
-
-    // Datenquelle aktualisieren
-    this.dataSource.data = filteredPersonen;
+    
+    // Debug log after filtering
+    console.log('Filtered data count:', this.dataSource.filteredData.length);
   }
 
   /**
@@ -288,5 +339,29 @@ export class PersonenListeComponent implements OnInit, OnDestroy {
       horizontalPosition: 'center',
       verticalPosition: 'bottom',
     });
+  }
+
+  /**
+   * Configures custom sorting logic for nested properties
+   */
+  private configureTableSorting(): void {
+    // Custom sort logic for nested properties
+    this.dataSource.sortingDataAccessor = (item: Person, property: string) => {
+      switch (property) {
+        case 'grad':
+          return item.grunddaten.grad || '';
+        case 'name':
+          return item.grunddaten.nachname + ' ' + item.grunddaten.vorname || '';
+        case 'funktion':
+          return item.grunddaten.funktion || '';
+        case 'zug':
+          return item.zivilschutz.einteilung.zug || 0;
+        case 'status':
+          return item.zivilschutz.status || '';
+        default:
+          // For non-nested properties
+          return (item as any)[property] || '';
+      }
+    };
   }
 }

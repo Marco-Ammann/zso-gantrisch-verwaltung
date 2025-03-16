@@ -114,8 +114,8 @@
 
   <!-- Table View -->
   <mat-card *ngIf="!isLoading() && viewMode === 'table'">
-    <div class="table-container">
-      <table mat-table [dataSource]="dataSource" matSort class="ausbildungen-table">
+    <div class="app-responsive-table-container">
+      <table mat-table [dataSource]="dataSource" matSort class="app-responsive-table ausbildungen-table">
         <!-- Typ -->
         <ng-container matColumnDef="typ">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Typ</th>
@@ -227,7 +227,10 @@
     </div>
 
     <!-- Paginierung -->
-    <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" showFirstLastButtons>
+    <mat-paginator 
+      [pageSizeOptions]="[10, 25, 50, 100]" 
+      showFirstLastButtons
+      aria-label="Ausbildungsseiten auswählen">
     </mat-paginator>
   </mat-card>
 </div>

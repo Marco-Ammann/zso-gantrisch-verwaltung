@@ -143,28 +143,33 @@ export class AusbildungsmatrixComponent implements OnInit {
    * Configures sorting, pagination, and custom filtering for the data table.
    */
   ngAfterViewInit(): void {
-    // Set up sorting and pagination
-    this.dataSource.sort = this.sort;
-    this.dataSource.paginator = this.paginator;
-
-    // Configure custom search filter across multiple person properties
-    this.dataSource.filterPredicate = (data: MatrixRow, filter: string) => {
-      const personData = data.person.grunddaten;
+    // Custom sorting for nested properties
+    this.dataSource.sortingDataAccessor = (data: MatrixRow, property: string) => {
+      if (property === 'name' || property === 'person.grunddaten.nachname') {
+        return data.person.grunddaten.nachname.toLowerCase();
+      }
       
-      // Build searchable text by combining relevant person properties
-      const searchableText = [
-        personData.grad,
-        personData.nachname,
-        personData.vorname,
-        personData.funktion,
-        data.person.zivilschutz.einteilung.zug
-      ]
-        .filter(Boolean)  // Remove any undefined/null values
-        .join(' ')
-        .toLowerCase();
-
-      return searchableText.includes(filter);
+      // For ausbildung columns
+      if (property.startsWith('ausbildung_')) {
+        const ausbildungId = property.substring(11);
+        // Fix: Use ausbildungen Map instead of non-existent teilnahmen array
+        const teilnahmeInfo = data.ausbildungen.get(ausbildungId);
+        return teilnahmeInfo ? teilnahmeInfo.status : '';
+      }
+      
+      return '';
     };
+    
+    // Set up sorting and pagination
+    setTimeout(() => {
+      if (this.sort) {
+        this.dataSource.sort = this.sort;
+      }
+      
+      if (this.paginator) {
+        this.dataSource.paginator = this.paginator;
+      }
+    }, 100);
   }
 
 

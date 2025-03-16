@@ -48,10 +48,27 @@
   
   .table-container {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch; // Smooth scrolling on iOS
+    margin-bottom: 1rem;
+    
+    // Fix for horizontal overflow
+    &::-webkit-scrollbar {
+      height: 8px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
   }
   
   .personen-table {
     width: 100%;
+    min-width: 800px; // Ensure table has minimum width for readability
   }
   
   .mat-column-aktionen {
@@ -133,6 +150,7 @@
     .header-section {
       flex-direction: column;
       align-items: flex-start;
+      gap: 12px;
     }
     
     .search-field {
@@ -141,6 +159,52 @@
     
     .action-section {
       width: 100%;
+      justify-content: space-between;
+    }
+    
+    .status-chips {
+      flex-wrap: wrap;
+      width: 100%;
+      
+      .mat-chip-option {
+        margin: 2px;
+      }
+    }
+    
+    .person-card {
+      .mat-card-title {
+        font-size: 18px;
+      }
+      
+      .mat-card-subtitle {
+        font-size: 14px;
+      }
+    }
+    
+    .action-buttons {
+      flex-wrap: nowrap;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .personen-liste-container {
+      padding: 8px;
+    }
+    
+    .page-title {
+      font-size: 20px;
+    }
+    
+    .view-controls-container {
+      padding: 4px 8px;
+    }
+    
+    .view-controls button {
+      margin-right: 4px;
+      
+      .mat-icon {
+        margin-right: 4px;
+      }
     }
   }
 

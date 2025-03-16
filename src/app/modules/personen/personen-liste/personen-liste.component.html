@@ -143,7 +143,9 @@
   <!-- Table View -->
   <mat-card *ngIf="viewMode === 'table'">
     <div class="table-container">
-      <table mat-table [dataSource]="dataSource" matSort class="personen-table">
+      <table mat-table [dataSource]="dataSource" matSort class="personen-table" aria-label="Personenliste">
+        <!-- Make sure column IDs match the properties in sortingDataAccessor -->
+        
         <!-- Grad -->
         <ng-container matColumnDef="grad">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Grad</th>
@@ -267,7 +269,10 @@
     </div>
 
     <!-- Paginierung -->
-    <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" showFirstLastButtons>
+    <mat-paginator 
+      [pageSizeOptions]="[10, 25, 50, 100]" 
+      showFirstLastButtons 
+      aria-label="Personenseiten auswählen">
     </mat-paginator>
   </mat-card>
 </div>
